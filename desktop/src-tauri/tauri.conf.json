@@ -14,6 +14,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": false,
     "targets": "all",
     "category": "Business",
     "shortDescription": "Offline GST billing for Indian shops",

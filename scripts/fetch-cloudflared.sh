@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Downloads the official cloudflared binary for one OS/arch into dist-server/bin/.
-# Usage: ./scripts/fetch-cloudflared.sh <os> <arch>
+# Usage: bash ./scripts/fetch-cloudflared.sh <os> <arch>
 #   os:   windows | darwin | linux
 #   arch: amd64 | arm64
+# Works in Git Bash on Windows (GitHub windows-latest with shell: bash).
 set -euo pipefail
 
 CLOUDFLARED_VERSION="2026.10.0"
@@ -13,6 +14,20 @@ SUMS_FILE="$ROOT/scripts/cloudflared.sha256"
 
 OS="${1:?os (windows|darwin|linux)}"
 ARCH="${2:?arch (amd64|arm64)}"
+
+sha256_file() {
+  local f="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$f" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$f" | awk '{print $1}'
+  elif command -v openssl >/dev/null 2>&1; then
+    openssl dgst -sha256 "$f" | awk '{print $2}'
+  else
+    echo "Need sha256sum, shasum, or openssl on PATH" >&2
+    exit 1
+  fi
+}
 
 mkdir -p "$OUT_DIR"
 
@@ -64,7 +79,7 @@ else
   BIN="$TMP/$ASSET"
 fi
 
-ACTUAL="$(shasum -a 256 "$BIN" | awk '{print $1}')"
+ACTUAL="$(sha256_file "$BIN")"
 if [[ "$ACTUAL" != "$EXPECTED" ]]; then
   echo "SHA-256 mismatch for $KEY" >&2
   echo "  expected: $EXPECTED" >&2
@@ -73,5 +88,7 @@ if [[ "$ACTUAL" != "$EXPECTED" ]]; then
 fi
 
 cp "$BIN" "$OUT_DIR/$OUT_NAME"
-chmod +x "$OUT_DIR/$OUT_NAME"
+if [[ "$OS" != "windows" ]]; then
+  chmod +x "$OUT_DIR/$OUT_NAME"
+fi
 echo "==> Installed $OUT_DIR/$OUT_NAME"
