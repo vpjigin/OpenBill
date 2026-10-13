@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 import app.billing.auth.AuthService;
+import app.billing.auth.AuthTokenTouchService;
 import app.billing.auth.TokenAuthFilter;
 import jakarta.servlet.DispatcherType;
 
@@ -28,7 +29,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, AuthService auth) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, AuthService auth, AuthTokenTouchService tokenTouch)
+            throws Exception {
         http
             // Bearer tokens in a header, no cookies -> CSRF does not apply.
             .csrf(c -> c.disable())
@@ -40,7 +42,7 @@ public class SecurityConfig {
             .headers(h -> h
                 .frameOptions(f -> f.deny())
                 .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
-            .addFilterBefore(new TokenAuthFilter(auth), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new TokenAuthFilter(auth, tokenTouch), UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(a -> a
                 .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
                 .requestMatchers("/", "/index.html", "/admin.html", "/assets/**", "/favicon.svg").permitAll()

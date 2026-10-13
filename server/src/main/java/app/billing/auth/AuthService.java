@@ -29,7 +29,6 @@ import app.billing.user.UserRepository;
 public class AuthService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final Duration SEEN_WRITE_INTERVAL = Duration.ofMinutes(1);
 
     private final UserRepository users;
     private final AuthTokenRepository tokens;
@@ -105,20 +104,15 @@ public class AuthService {
         return new LoginResult(raw, toCurrent(t));
     }
 
-    /** Validates a bearer token for the channel the request arrived on. */
-    @Transactional
-    public Optional<CurrentUser> authenticate(String rawToken, Channel channel) {
+    /** Validates a bearer token for the channel the request arrived on (read-only, no writes). */
+    @Transactional(readOnly = true)
+    public Optional<AuthenticatedSession> authenticate(String rawToken, Channel channel) {
         Instant now = Instant.now();
         return tokens.findByTokenHash(hash(rawToken))
                 .filter(t -> t.getExpiresAt().isAfter(now))
                 .filter(t -> t.getChannel() == channel)      // a Wi-Fi token can't be replayed on admin, etc.
                 .filter(t -> t.getUser().isActive() && !t.getUser().isDeleted())
-                .map(t -> {
-                    if (t.getLastSeenAt().plus(SEEN_WRITE_INTERVAL).isBefore(now)) {
-                        t.setLastSeenAt(now);
-                    }
-                    return toCurrent(t);
-                });
+                .map(t -> new AuthenticatedSession(toCurrent(t), t.getLastSeenAt()));
     }
 
     @Transactional

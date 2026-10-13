@@ -139,7 +139,7 @@ public class ActivityService {
                     userId == null ? null : userId.toString(),
                     userName, channel == null ? null : channel.name(), ip, action, target, details);
         } catch (Exception e) {
-            log.warn("Could not write activity log ({}): {}", action, e.getMessage());
+            log.debug("Could not write activity log ({}): {}", action, e.getMessage());
         }
     }
 

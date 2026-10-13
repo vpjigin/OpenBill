@@ -1,6 +1,7 @@
 package app.billing.auth;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,9 +23,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class TokenAuthFilter extends OncePerRequestFilter {
 
     private final AuthService auth;
+    private final AuthTokenTouchService tokenTouch;
 
-    public TokenAuthFilter(AuthService auth) {
+    public TokenAuthFilter(AuthService auth, AuthTokenTouchService tokenTouch) {
         this.auth = auth;
+        this.tokenTouch = tokenTouch;
     }
 
     @Override
@@ -33,9 +36,11 @@ public class TokenAuthFilter extends OncePerRequestFilter {
         String header = req.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String raw = header.substring(7).trim();
-            auth.authenticate(raw, ChannelFilter.channelOf(req)).ifPresent(cu -> {
-                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + cu.role().name()));
-                var authentication = new UsernamePasswordAuthenticationToken(cu, null, authorities);
+            Instant now = Instant.now();
+            auth.authenticate(raw, ChannelFilter.channelOf(req)).ifPresent(session -> {
+                tokenTouch.tryTouchLastSeen(session.user().tokenId(), session.lastSeenAt(), now);
+                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + session.user().role().name()));
+                var authentication = new UsernamePasswordAuthenticationToken(session.user(), null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             });
         }
