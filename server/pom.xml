@@ -13,7 +13,7 @@
 
   <groupId>app.billing</groupId>
   <artifactId>billing-server</artifactId>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
   <name>billing-server</name>
   <description>Offline-first billing server (runs inside the desktop app)</description>
 

@@ -1,6 +1,6 @@
 [package]
 name = "billing-desktop"
-version = "0.1.0"
+version = "1.0.0"
 description = "Desktop shell: runs the billing server and shows the admin app"
 edition = "2021"
 rust-version = "1.77"

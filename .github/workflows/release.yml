@@ -157,3 +157,74 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Upload stable download aliases (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VER="${TAG#v}"
+          if [[ -n "${{ matrix.rust-target }}" ]]; then
+            BUNDLE_ROOT="desktop/src-tauri/target/${{ matrix.rust-target }}/release/bundle"
+          else
+            BUNDLE_ROOT="desktop/src-tauri/target/release/bundle"
+          fi
+          if [[ ! -d "$BUNDLE_ROOT" ]]; then
+            echo "Bundle dir not found: $BUNDLE_ROOT" >&2
+            exit 1
+          fi
+
+          find_one() {
+            local pattern="$1"
+            local hit
+            hit="$(find "$BUNDLE_ROOT" -type f -name "$pattern" | head -n 1)"
+            if [[ -z "$hit" ]]; then
+              echo "No file matching $pattern under $BUNDLE_ROOT" >&2
+              find "$BUNDLE_ROOT" -type f | head -n 40 >&2 || true
+              exit 1
+            fi
+            printf '%s' "$hit"
+          }
+
+          upload_alias() {
+            local src="$1"
+            local dest="$2"
+            echo "Uploading $src as $dest"
+            gh release upload "$TAG" "${src}#${dest}" --clobber
+          }
+
+          case "${{ matrix.name }}" in
+            "Windows x64")
+              upload_alias "$(find_one "OpenBill_${VER}_x64-setup.exe")" "OpenBill-Windows-Setup.exe"
+              upload_alias "$(find_one "OpenBill_${VER}_x64*.msi")" "OpenBill-Windows.msi"
+              ;;
+            "macOS Apple Silicon")
+              upload_alias "$(find_one "OpenBill_${VER}_aarch64.dmg")" "OpenBill-macOS-AppleSilicon.dmg"
+              ;;
+            "macOS Intel")
+              upload_alias "$(find_one "OpenBill_${VER}_x64.dmg")" "OpenBill-macOS-Intel.dmg"
+              ;;
+            "Linux x64")
+              upload_alias "$(find_one "OpenBill_${VER}_amd64.AppImage")" "OpenBill-Linux.AppImage"
+              upload_alias "$(find_one "OpenBill_${VER}_amd64.deb")" "OpenBill-Linux.deb"
+              upload_alias "$(find_one "OpenBill_${VER}_amd64.rpm")" "OpenBill-Linux.rpm"
+              ;;
+            *)
+              echo "Unknown matrix name: ${{ matrix.name }}" >&2
+              exit 1
+              ;;
+          esac
+
+  publish:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark GitHub Release as published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --draft=false
