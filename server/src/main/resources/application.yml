@@ -1,5 +1,5 @@
 app:
-  name: Billing
+  name: OpenBill
   # Set by the desktop shell (APP_DATA_DIR). Falls back to ~/.billing-app for dev runs.
   data-dir: ${APP_DATA_DIR:${user.home}/.billing-app}
   # Admin UI + admin API. Always bound to 127.0.0.1 only.

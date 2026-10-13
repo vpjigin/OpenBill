@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { APP_NAME } from "../../shared/brand";
 import { Button, Card, PageHeader } from "../../shared/ui";
 import { AccessTiles } from "../AccessTiles";
 import { adminApi, type Device } from "../adminApi";
@@ -21,7 +22,7 @@ export function AccessPage() {
     <>
       <PageHeader
         title="Server & access"
-        subtitle="Billing is a website served from this computer. Data never leaves this PC."
+        subtitle={`${APP_NAME} bills in the browser from this computer. Data never leaves this PC.`}
       />
       <AccessTiles />
       <Card title="Signed-in devices" actions={<span className="text-[13px] text-muted">Stopping a channel signs out its devices</span>}>

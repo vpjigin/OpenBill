@@ -27,7 +27,7 @@ public class AdminDesktopController {
         if (!auth.matchesSecret(secret)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             res.setContentType(MediaType.TEXT_HTML_VALUE);
-            res.getWriter().write("Open the Billing app to manage the shop.");
+            res.getWriter().write("Open the OpenBill app to manage the shop.");
             return;
         }
         res.addHeader("Set-Cookie",

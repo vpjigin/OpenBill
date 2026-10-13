@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Billing",
+  "productName": "OpenBill",
   "version": "0.1.0",
-  "identifier": "app.billing.desktop",
+  "identifier": "io.github.vpjigin.openbill",
   "build": {
     "frontendDist": "../splash"
   },
@@ -16,8 +16,8 @@
     "active": true,
     "targets": "all",
     "category": "Business",
-    "shortDescription": "Offline billing for shops",
-    "longDescription": "Offline-first GST billing. The desktop app runs the server; counters and phones bill through the browser over Wi-Fi or a public link.",
+    "shortDescription": "Offline GST billing for Indian shops",
+    "longDescription": "OpenBill — offline GST billing for Indian shops. The desktop app runs the server; counters and phones bill through the browser over Wi-Fi or a public link.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

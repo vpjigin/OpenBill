@@ -129,7 +129,7 @@ fn main() {
                 .config()
                 .product_name
                 .clone()
-                .unwrap_or_else(|| "Billing".to_string());
+                .unwrap_or_else(|| "OpenBill".to_string());
             let window_title = format!("{product} Admin");
             let tray_tip = format!("{product} is running");
 

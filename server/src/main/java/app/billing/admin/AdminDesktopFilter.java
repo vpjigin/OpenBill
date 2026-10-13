@@ -28,9 +28,9 @@ public class AdminDesktopFilter extends OncePerRequestFilter {
 
     private static final byte[] FORBIDDEN_HTML = """
             <!DOCTYPE html>
-            <html lang="en"><head><meta charset="utf-8"/><title>Billing Admin</title></head>
+            <html lang="en"><head><meta charset="utf-8"/><title>OpenBill Admin</title></head>
             <body style="font-family:system-ui,sans-serif;padding:2rem;color:#1b1f1d">
-            <p>Open the Billing app to manage the shop.</p>
+            <p>Open the OpenBill app to manage the shop.</p>
             </body></html>
             """.getBytes(StandardCharsets.UTF_8);
 

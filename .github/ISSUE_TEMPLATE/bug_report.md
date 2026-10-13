@@ -19,7 +19,7 @@ assignees: ""
 
 - OS and version:
 - App version (Help → About or installer name):
-- Billing channel (this computer / Wi-Fi / public):
+- OpenBill channel (this computer / Wi-Fi / public):
 
 ## Logs or screenshots
 

@@ -1,8 +1,8 @@
-# Billing
+# OpenBill
 
-Offline-first GST billing for shops. Open source ([MIT](LICENSE)), runs on **Windows, macOS and Linux**.
+Offline GST billing for Indian shops. Open source ([MIT](LICENSE)), runs on **Windows, macOS and Linux**.
 
-Repository: https://github.com/billing-app/billing-app
+Repository: https://github.com/vpjigin/OpenBill
 
 - **Desktop app** (admin only): installs like any app, runs the server, manages users and access.
 - **Billing website**: every bill is made in a browser — on the same computer, on any device on the shop
@@ -28,101 +28,42 @@ Repository: https://github.com/billing-app/billing-app
 | Desktop shell | Tauri 2 (native window + tray, small installers) |
 | Server | Java 21, Spring Boot 3.5, Spring Security, JPA |
 | Database | SQLite (WAL) + Flyway migrations |
-| Web apps | React 19 + Vite + TypeScript + Tailwind 4 (admin and billing from one codebase) |
-| Java runtime | Bundled per OS with `jlink` — users never install Java |
-| Releases | GitHub Actions → `.msi/.exe`, `.dmg` (Apple Silicon + Intel), `.deb/.rpm/.AppImage` |
+| Web | React 19, Vite, Tailwind 4 |
 
-## Design decisions
-
-- **Ports, not headers, decide what's reachable.** The admin API and admin UI exist only on
-  `127.0.0.1:9090`. Wi-Fi and public requests can't reach them at all (`ChannelFilter`).
-- **Tokens are bound to the channel** they were issued on — a Wi-Fi token can't be replayed on the admin port.
-- **UUIDv7 primary keys** (time-ordered) on every table, plus `created_at`, `updated_at`, `version`
-  (optimistic locking) and `deleted_at` (soft delete) — ready for multi-branch sync later.
-- **Invoice numbers are separate** from IDs: `INV/26-27/000001`, gap-free, restarting every April (GST rule).
-  The number is taken as the first write of the save transaction so two counters can't collide.
-- **Money is integer paise**, GST rates are basis points (12% = 1200). No floating point anywhere.
-- **Invoices are immutable** — there is no edit endpoint. Corrections will be credit notes.
-- **Prices come from the server** at save time; the browser's numbers are only a preview.
-
-## Quick start (development)
-
-Prerequisites: JDK 21, Maven, Node 20+. Rust only if you work on the desktop shell.
+## Development
 
 ```bash
 # 1. Server (creates ~/.billing-app/billing.db)
-cd server
-mvn spring-boot:run
+cd server && mvn spring-boot:run
 
-# 2a. Admin app  → http://localhost:5174/admin.html
-cd web && npm install && npm run dev:admin
+# 2a. Admin app → http://localhost:5174/admin.html
+cd web && npm run dev:admin
 
 # 2b. Billing website → http://localhost:5173
 cd web && npm run dev:billing
+
+# 3. Desktop (needs bundled server from scripts/build-server.sh for a full run)
+cd desktop && npm run dev
 ```
 
-First run of the admin app shows the **setup** screen (shop name + owner account).
-Then add items from the billing website (**Items & stock**, manager/admin only) and make a bill.
-
-**GSTR-1:** Managers and admins can download a monthly zip from **Reports → GSTR-1** on the billing site.
-Check the CSV columns against the current GST offline tool template before filing.
-
-**E-invoice (manual upload):** **Reports → E-invoice** exports JSON for B2B bills without an IRN; after the portal
-returns IRN/Ack/QR, enter them on the invoice detail page. See `server/src/main/java/app/billing/einvoice/README.md`
-— verify the field list against the current NIC schema before use.
-
-### Run the desktop app in dev
+Build everything:
 
 ```bash
-cd server && mvn spring-boot:run          # keep running
-cd desktop && npm install && npm run dev  # opens the window, finds the server on :9090
+cd web && npm ci && npm run build
+cd server && mvn -q verify
+cd desktop && npm ci && npm run build   # after ./scripts/build-server.sh
 ```
 
-In dev the shell doesn't start Java itself (nothing bundled yet) — it uses the server you started.
+## Signing (optional)
 
-## Build an installer locally
-
-```bash
-./scripts/build-server.sh   # web → server.jar → jlink runtime, into dist-server/
-cd desktop && npm install && npm run build
-```
-
-Installers land in `desktop/src-tauri/target/release/bundle/`. You can only build for the OS you're on —
-that's what the release workflow is for.
-
-## Release (all three OSes)
-
-1. `./scripts/bump-version.sh 0.2.0` — updates `tauri.conf.json`, `Cargo.toml`, `server/pom.xml`, and `web/package.json`.
-2. `git tag v0.2.0 && git push --tags`
-3. GitHub Actions builds every installer and creates a **draft release**. Review it and publish.
-
-Regenerate desktop icons after changing `desktop/app-icon.png`:
-
-```bash
-cd desktop && npx tauri icon app-icon.png
-```
-
-### Signing (optional)
-
-CI builds **unsigned** installers when signing secrets are missing. Users see normal OS warnings:
-
-| OS | Without signing | With secrets in GitHub Actions |
-|---|---|---|
-| **macOS** | Gatekeeper blocks the app until the user right-clicks → **Open** once | Add `APPLE_CERTIFICATE` (base64 `.p12`), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` — see [Tauri macOS signing](https://v2.tauri.app/distribute/sign/macos/) |
-| **Windows** | SmartScreen “Unknown publisher” | Configure Windows signing per [Tauri Windows signing](https://v2.tauri.app/distribute/sign/windows/) (e.g. `TAURI_SIGNING_PRIVATE_KEY` + password for trusted signing pipelines) |
-| **Linux** | No code signing expected | — |
+Installers can be signed on CI when repository secrets are set — see [Tauri signing docs](https://v2.tauri.app/distribute/sign/).
 
 Never commit certificates or passwords. Add them only as repository **Secrets**.
 
-## Public access
+## Public access (optional)
 
-Uses [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-(`cloudflared`), which works behind CGNAT with no router setup.
-
-1. Put the `cloudflared` binary in `<data dir>/bin/` or on `PATH` (later: bundle it per OS in CI).
-2. **Testing:** leave the tunnel token empty in **Shop & GST settings** → *Start* gives a temporary
-   `*.trycloudflare.com` link (changes every start).
-3. **Production:** create a named tunnel whose public hostname points to `http://127.0.0.1:8081`,
+1. **Quick tunnel:** Admin → Server & access → start **Public link**. Uses a random `*.trycloudflare.com` URL while running.
+2. **Production:** create a named tunnel whose public hostname points to `http://127.0.0.1:8081`,
    paste its token and URL in settings. The link then stays fixed.
 
 Only users with **Allow web sign-in** can log in over Wi-Fi or public. Login is rate-limited
@@ -132,9 +73,9 @@ Only users with **Allow web sign-in** can log in over Wi-Fi or public. Login is 
 
 | OS | Folder |
 |---|---|
-| Windows | `%APPDATA%\app.billing.desktop\` |
-| macOS | `~/Library/Application Support/app.billing.desktop/` |
-| Linux | `~/.local/share/app.billing.desktop/` |
+| Windows | `%APPDATA%\io.github.vpjigin.openbill\` |
+| macOS | `~/Library/Application Support/io.github.vpjigin.openbill/` |
+| Linux | `~/.local/share/io.github.vpjigin.openbill/` |
 
 `billing.db` (+ `-wal`, `-shm`), `backups/` (scheduled copies), and `logs/server.log`.
 Use **Admin → Backup** to back up, upload, or schedule a restore (applied on next app start).
@@ -154,8 +95,9 @@ scripts/   build-server.sh (jar + jlink runtime)
 
 ## Branding
 
-- Product name: **Billing** (`app.name` in `server/src/main/resources/application.yml`, `web/src/shared/brand.ts`, Tauri `productName`).
-- Desktop identifier: `app.billing.desktop` (data folder name on each OS — change only with a migration plan).
+- Product name: **OpenBill** (`app.name` in `server/src/main/resources/application.yml`, `web/src/shared/brand.ts`, Tauri `productName`).
+- Tagline: **Offline GST billing for Indian shops**
+- Desktop identifier: `io.github.vpjigin.openbill` (data folder name on each OS).
 - Shop logo: **Admin → Shop & GST settings** (PNG/JPEG, max 200 KB); appears on A4 and optional 80 mm prints.
 
 ## License

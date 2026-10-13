@@ -25,15 +25,15 @@ class CloudflaredLocatorTest {
         Files.createDirectories(dataBin.getParent());
         Files.writeString(dataBin, "z");
 
-        AppProperties props = new AppProperties("Billing", data.toString(), 9090, 8080, 8081, explicit.toString(),
+        AppProperties props = new AppProperties("OpenBill", data.toString(), 9090, 8080, 8081, explicit.toString(),
                 null, bin.toString());
         assertThat(CloudflaredLocator.find(props)).isEqualTo(explicit.toString());
 
-        AppProperties noExplicit = new AppProperties("Billing", data.toString(), 9090, 8080, 8081, "", null,
+        AppProperties noExplicit = new AppProperties("OpenBill", data.toString(), 9090, 8080, 8081, "", null,
                 bin.toString());
         assertThat(CloudflaredLocator.find(noExplicit)).isEqualTo(bundled.toString());
 
-        AppProperties noBin = new AppProperties("Billing", data.toString(), 9090, 8080, 8081, "", null, "");
+        AppProperties noBin = new AppProperties("OpenBill", data.toString(), 9090, 8080, 8081, "", null, "");
         assertThat(CloudflaredLocator.find(noBin)).isEqualTo(dataBin.toString());
     }
 }
