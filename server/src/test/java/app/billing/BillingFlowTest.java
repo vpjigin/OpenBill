@@ -105,7 +105,7 @@ class BillingFlowTest {
 
         mvc.perform(auth(get("/api/items"), billingToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].stockMilli").value(6_000));
+                .andExpect(jsonPath("$.items[0].stockMilli").value(6_000));
 
         mvc.perform(auth(get("/api/invoices"), adminToken).with(asAdmin())).andExpect(status().isNotFound());
 
@@ -134,7 +134,7 @@ class BillingFlowTest {
 
         mvc.perform(auth(get("/api/items?q=Rice"), billingToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].stockMilli").value(4_998_750));
+                .andExpect(jsonPath("$.items[0].stockMilli").value(4_998_750));
 
         JsonNode notebook = body(mvc.perform(auth(post("/api/items"), adminToken).with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -209,7 +209,7 @@ class BillingFlowTest {
 
         mvc.perform(auth(get("/api/customers?q=TN"), billingToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("TN Buyer"));
+                .andExpect(jsonPath("$.items[0].name").value("TN Buyer"));
 
         JsonNode interInv = body(mvc.perform(auth(post("/api/invoices"), billingToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -283,7 +283,7 @@ class BillingFlowTest {
         JsonNode allItems = body(mvc.perform(auth(get("/api/items"), billingToken))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         long puzzleStock = 0;
-        for (JsonNode it : allItems) {
+        for (JsonNode it : allItems.get("items")) {
             if (itemId.equals(it.get("id").asText())) {
                 puzzleStock = it.get("stockMilli").asLong();
                 break;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { gstStateName } from "../../shared/gstStates";
 import { formatGstRate, formatPaise, formatQty } from "../../shared/money";
+import { StickyActionBar } from "../../shared/layout";
 import { ErrorNote, PageHeader, errorText } from "../../shared/ui";
 import { ReceiptPrintPanel } from "../ReceiptPrintPanel";
 import { PrintDocument, creditNoteToPrintInvoice } from "../PrintDocument";
@@ -56,8 +57,10 @@ export function CreditNoteDetailPage() {
   const showBrowserPrint = mode === "browser" || !serverPrintReady;
 
   return (
-    <div className="flex flex-col gap-6">
-      <ReceiptPrintPanel kind="credit-note" id={cn.id} />
+    <div className="flex w-full min-w-0 flex-col gap-6">
+      <StickyActionBar>
+        <ReceiptPrintPanel kind="credit-note" id={cn.id} />
+      </StickyActionBar>
       <div className="no-print">
         <PageHeader title={cn.cnNo} subtitle={new Date(cn.cnDate).toLocaleString("en-IN")} />
         <p className="text-sm">
@@ -82,8 +85,30 @@ export function CreditNoteDetailPage() {
             </dl>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
+        <div className="flex flex-col gap-2 md:hidden">
+          {cn.lines.map((l) => (
+            <div key={l.lineNo} className="rounded-xl border border-line bg-surface p-4 text-sm">
+              <div className="flex justify-between gap-2 font-medium">
+                <span>
+                  {l.lineNo}. {l.name}
+                </span>
+                <span className="font-mono">{formatPaise(l.totalPaise)}</span>
+              </div>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted">
+                <dt>Qty</dt>
+                <dd className="m-0 text-right font-mono text-ink">
+                  {formatQty(l.qtyMilli, l.unit)} {l.unit}
+                </dd>
+                <dt>Taxable</dt>
+                <dd className="m-0 text-right font-mono text-ink">{formatPaise(l.taxablePaise)}</dd>
+                <dt>GST</dt>
+                <dd className="m-0 text-right">{formatGstRate(l.gstRateBp)}</dd>
+              </dl>
+            </div>
+          ))}
+        </div>
+        <div className="hidden rounded-xl border border-line bg-surface md:block">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-muted">
                 <th className="px-4 py-2.5">#</th>
@@ -110,6 +135,16 @@ export function CreditNoteDetailPage() {
             </tbody>
           </table>
         </div>
+        <dl className="m-0 mt-4 grid max-w-sm grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
+          <dt className="text-muted">Taxable</dt>
+          <dd className="m-0 text-right font-mono">{formatPaise(cn.taxablePaise)}</dd>
+          <dt className="text-muted">{cn.interState ? "IGST" : "CGST + SGST"}</dt>
+          <dd className="m-0 text-right font-mono">
+            {formatPaise(cn.interState ? cn.igstPaise : cn.cgstPaise + cn.sgstPaise)}
+          </dd>
+          <dt className="font-semibold">Total</dt>
+          <dd className="m-0 text-right font-mono text-lg font-semibold">{formatPaise(cn.totalPaise)}</dd>
+        </dl>
         <p className="mt-4">
           <Link to="/credit-notes" className="text-sm text-brand">
             ← All credit notes

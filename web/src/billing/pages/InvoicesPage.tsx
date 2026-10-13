@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { DataTable, Toolbar, ToolbarField } from "../../shared/layout";
 import { formatPaise } from "../../shared/money";
 import { Card, PageHeader } from "../../shared/ui";
 import { billingApi, type Invoice } from "../billingApi";
@@ -37,69 +38,68 @@ export function InvoicesPage() {
       <PageHeader title="Invoices" subtitle="Search and reprint saved bills" />
       <Card
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="date"
-              aria-label="From date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="min-h-10 rounded-lg border border-[#b9c2bd] px-2 text-sm"
-            />
-            <span className="text-muted">to</span>
-            <input
-              type="date"
-              aria-label="To date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="min-h-10 rounded-lg border border-[#b9c2bd] px-2 text-sm"
-            />
-            <input
-              type="search"
-              aria-label="Search invoices"
-              placeholder="Invoice no, customer…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="min-h-10 w-48 rounded-lg border border-[#b9c2bd] px-3 text-sm"
-            />
-          </div>
+          <Toolbar>
+            <ToolbarField label="From">
+              <input
+                type="date"
+                aria-label="From date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className="rounded-lg border border-[#b9c2bd] px-2"
+              />
+            </ToolbarField>
+            <ToolbarField label="To">
+              <input
+                type="date"
+                aria-label="To date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className="rounded-lg border border-[#b9c2bd] px-2"
+              />
+            </ToolbarField>
+            <ToolbarField label="Search">
+              <input
+                type="search"
+                aria-label="Search invoices"
+                placeholder="Invoice no, customer…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="rounded-lg border border-[#b9c2bd] px-3"
+              />
+            </ToolbarField>
+          </Toolbar>
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] border-collapse text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wider text-muted">
-                <th className="px-5 py-2.5 font-medium">Invoice</th>
-                <th className="px-3 py-2.5 font-medium">Date</th>
-                <th className="px-3 py-2.5 font-medium">Customer</th>
-                <th className="px-3 py-2.5 font-medium">Payment</th>
-                <th className="px-5 py-2.5 text-right font-medium">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr className="border-t border-line-soft">
-                  <td colSpan={5} className="px-5 py-4 text-muted">
-                    No invoices in this range.
-                  </td>
-                </tr>
-              )}
-              {rows.map((i) => (
-                <tr
-                  key={i.id}
-                  className="cursor-pointer border-t border-line-soft hover:bg-brand-soft/40"
-                  onClick={() => navigate(`/invoices/${i.id}`)}
-                >
-                  <td className="px-5 py-3 font-mono text-[13px]">{i.invoiceNo}</td>
-                  <td className="px-3 py-3">
-                    {new Date(i.invoiceDate).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-                  </td>
-                  <td className="px-3 py-3">{i.customerName ?? "Walk-in"}</td>
-                  <td className="px-3 py-3">{i.paymentMode}</td>
-                  <td className="px-5 py-3 text-right font-mono">{formatPaise(i.totalPaise)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="px-2 pb-4 sm:px-4">
+          <DataTable
+            columns={[
+              {
+                key: "no",
+                header: "Invoice",
+                mobilePrimary: true,
+                cell: (i) => <span className="font-mono text-[13px]">{i.invoiceNo}</span>,
+              },
+              {
+                key: "date",
+                header: "Date",
+                cell: (i) =>
+                  new Date(i.invoiceDate).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+              },
+              { key: "customer", header: "Customer", cell: (i) => i.customerName ?? "Walk-in" },
+              { key: "payment", header: "Payment", hideOnMobile: true, cell: (i) => i.paymentMode },
+              {
+                key: "total",
+                header: "Total",
+                mobileAmount: true,
+                className: "text-right font-mono",
+                cell: (i) => formatPaise(i.totalPaise),
+              },
+            ]}
+            rows={rows}
+            rowKey={(i) => i.id}
+            onRowClick={(i) => navigate(`/invoices/${i.id}`)}
+            emptyMessage="No invoices in this range."
+          />
         </div>
       </Card>
     </>

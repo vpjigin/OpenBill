@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Role } from "../../shared/api";
+import { DataTable, SplitLayout } from "../../shared/layout";
 import { Badge, Button, Card, ErrorNote, Field, PageHeader, errorText } from "../../shared/ui";
 import { adminApi, type UserRow } from "../adminApi";
 
@@ -35,6 +36,12 @@ export function UsersPage({ currentUserId }: { currentUserId: string }) {
     }
   }
 
+  const addForm = (
+    <div className="rounded-xl border border-line bg-surface p-5 xl:border-0 xl:p-0">
+      <AddUser onCreated={load} />
+    </div>
+  );
+
   return (
     <>
       <PageHeader
@@ -42,59 +49,61 @@ export function UsersPage({ currentUserId }: { currentUserId: string }) {
         subtitle="Only the admin on this computer can create users. Others sign in on the billing website."
       />
       <ErrorNote message={error} />
-      <div className="flex flex-wrap items-start gap-5">
-        <Card title="All users" className="min-w-0 flex-[999_1_520px]" actions={<span className="text-[13px] text-muted">{users.length} users</span>}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] border-collapse text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted">
-                  <th className="px-5 py-2.5 font-medium">Name</th>
-                  <th className="px-3 py-2.5 font-medium">Username</th>
-                  <th className="px-3 py-2.5 font-medium">Role</th>
-                  <th className="px-3 py-2.5 font-medium">Web sign-in</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Password</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className={`border-t border-line-soft ${u.active ? "" : "text-muted"}`}>
-                    <td className="px-5 py-3 font-medium">{u.name}</td>
-                    <td className="px-3 py-3 font-mono text-[13px]">{u.username}</td>
-                    <td className="px-3 py-3">
-                      <Badge tone={u.role === "ADMIN" ? "warn" : "ok"}>{u.role.toLowerCase()}</Badge>
-                    </td>
-                    <td className="px-3 py-3">
-                      <label className="inline-flex min-h-9 cursor-pointer items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={u.webAccess}
-                          onChange={(e) => update(u, { webAccess: e.target.checked })}
-                          className="size-4 accent-brand"
-                        />
-                        {u.webAccess ? "Allowed" : "Off"}
-                      </label>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <ResetPasswordButton user={u} onDone={load} />
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      {u.id === currentUserId ? (
-                        <span className="text-[13px] text-muted">You</span>
-                      ) : (
-                        <Button className="min-h-9 px-3 text-[13px]" onClick={() => update(u, { active: !u.active })}>
-                          {u.active ? "Disable" : "Enable"}
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <SplitLayout formTitle="Add user" addLabel="Add user" form={addForm} list={
+        <Card
+          className="w-full min-w-0"
+          actions={<span className="text-[13px] text-muted">{users.length} users</span>}
+        >
+          <div className="px-2 pb-2 sm:px-4">
+            <DataTable
+              columns={[
+                { key: "name", header: "Name", mobilePrimary: true, cell: (u) => u.name },
+                { key: "user", header: "Username", cell: (u) => <span className="font-mono text-[13px]">{u.username}</span> },
+                {
+                  key: "role",
+                  header: "Role",
+                  cell: (u) => <Badge tone={u.role === "ADMIN" ? "warn" : "ok"}>{u.role.toLowerCase()}</Badge>,
+                },
+                {
+                  key: "web",
+                  header: "Web sign-in",
+                  hideOnMobile: true,
+                  cell: (u) => (
+                    <label className="inline-flex min-h-11 cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={u.webAccess}
+                        onChange={(e) => update(u, { webAccess: e.target.checked })}
+                        className="size-4 accent-brand"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {u.webAccess ? "Allowed" : "Off"}
+                    </label>
+                  ),
+                },
+              ]}
+              rows={users}
+              rowKey={(u) => u.id}
+              emptyMessage="No users yet."
+              rowActions={(u) => (
+                <div className="flex flex-col items-end gap-1 sm:flex-row sm:flex-wrap sm:justify-end">
+                  <ResetPasswordButton user={u} onDone={load} />
+                  {u.id === currentUserId ? (
+                    <span className="text-[13px] text-muted">You</span>
+                  ) : (
+                    <Button
+                      className="min-h-11 px-3 text-[13px]"
+                      onClick={() => void update(u, { active: !u.active })}
+                    >
+                      {u.active ? "Disable" : "Enable"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            />
           </div>
         </Card>
-        <AddUser onCreated={load} />
-      </div>
+      } />
     </>
   );
 }
@@ -128,22 +137,22 @@ function ResetPasswordButton({ user, onDone }: { user: UserRow; onDone: () => vo
 
   if (!open) {
     return (
-      <Button type="button" className="min-h-9 px-3 text-[13px]" onClick={() => setOpen(true)}>
+      <Button type="button" className="min-h-11 px-3 text-[13px]" onClick={() => setOpen(true)}>
         Reset password
       </Button>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-label="Reset password">
-      <form onSubmit={submit} className="w-full max-w-md rounded-xl border border-line bg-surface p-5 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" role="dialog" aria-label="Reset password">
+      <form onSubmit={submit} className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-lg sm:rounded-xl">
         <h2 className="m-0 mb-2 text-lg font-semibold">Reset password</h2>
         <p className="m-0 mb-4 text-sm text-muted">
           Set a new password for <strong>{user.name}</strong> ({user.username}). Tell them the new password — they will
           be signed out everywhere.
         </p>
         {done ? (
-          <Button type="button" variant="primary" className="w-full" onClick={() => { setOpen(false); setDone(false); }}>
+          <Button type="button" variant="primary" className="min-h-11 w-full" onClick={() => { setOpen(false); setDone(false); }}>
             Close
           </Button>
         ) : (
@@ -158,11 +167,11 @@ function ResetPasswordButton({ user, onDone }: { user: UserRow; onDone: () => vo
               autoComplete="new-password"
             />
             <ErrorNote message={error} />
-            <div className="mt-4 flex gap-2">
-              <Button type="button" className="flex-1" onClick={() => setOpen(false)} disabled={busy}>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Button type="button" className="min-h-11 flex-1" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" className="flex-1" disabled={busy}>
+              <Button type="submit" variant="primary" className="min-h-11 flex-1" disabled={busy}>
                 {busy ? "Saving…" : "Reset password"}
               </Button>
             </div>
@@ -195,8 +204,8 @@ function AddUser({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 rounded-xl border border-line bg-surface p-5">
-      <h2 className="m-0 text-[17px] font-semibold">Add user</h2>
+    <form onSubmit={submit} className="flex min-w-0 flex-col gap-4">
+      <h2 className="m-0 text-[17px] font-semibold xl:hidden">Add user</h2>
       <Field label="Full name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
       <Field label="Username" value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} required autoComplete="off" />
       <Field label="Password or PIN (min 4)" type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} required minLength={4} autoComplete="new-password" />
@@ -209,7 +218,7 @@ function AddUser({ onCreated }: { onCreated: () => void }) {
               type="button"
               aria-pressed={f.role === r}
               onClick={() => setF({ ...f, role: r })}
-              className={`min-h-10 rounded-full px-4 text-[13px] font-semibold ${
+              className={`min-h-11 rounded-full px-4 text-[13px] font-semibold ${
                 f.role === r ? "border border-brand bg-brand text-white" : "border border-[#b9c2bd] bg-surface"
               }`}
             >
@@ -227,7 +236,7 @@ function AddUser({ onCreated }: { onCreated: () => void }) {
         <input type="checkbox" checked={f.webAccess} onChange={(e) => setF({ ...f, webAccess: e.target.checked })} className="size-5 accent-brand" />
       </label>
       <ErrorNote message={error} />
-      <Button type="submit" variant="primary" disabled={busy}>
+      <Button type="submit" variant="primary" className="min-h-11" disabled={busy}>
         Create user
       </Button>
     </form>

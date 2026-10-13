@@ -23,3 +23,6 @@ logs/
 Thumbs.db
 *.tsbuildinfo
 actionlint
+
+# Playwright responsive screenshots (local only)
+web/e2e/screenshots/

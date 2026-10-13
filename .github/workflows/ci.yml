@@ -30,10 +30,11 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Web apps (typecheck + build + unit tests)
+      - name: Web apps (lint + typecheck + build + unit tests)
         working-directory: web
         run: |
           npm ci
+          npm run lint
           npm run build
           npm run test:words
           npm run test:barcode

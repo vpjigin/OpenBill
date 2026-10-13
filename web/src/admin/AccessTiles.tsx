@@ -13,7 +13,7 @@ export function AccessTiles() {
   return (
     <div className="flex flex-col gap-3">
       <ErrorNote message={error} />
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3.5">
+      <div className="grid w-full min-w-0 grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3.5">
         <AccessTile
           title="This computer"
           description="Bill on this PC in the browser. On while this app runs."

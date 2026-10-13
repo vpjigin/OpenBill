@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { FormPageWrap } from "../../shared/layout";
 import { Button, Card, ErrorNote, Field, PageHeader, errorText } from "../../shared/ui";
 import { GST_STATES } from "../../shared/gstStates";
 import { adminApi } from "../adminApi";
@@ -99,7 +100,8 @@ export function SettingsPage() {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-5">
+    <FormPageWrap>
+    <form onSubmit={submit} className="flex w-full min-w-0 flex-col gap-5">
       <PageHeader title="Shop & GST settings" actions={<Button type="submit" variant="primary">Save</Button>} />
       {msg && <p className="m-0 text-sm text-brand">{msg}</p>}
       <ErrorNote message={error} />
@@ -244,5 +246,6 @@ export function SettingsPage() {
         </div>
       </Card>
     </form>
+    </FormPageWrap>
   );
 }

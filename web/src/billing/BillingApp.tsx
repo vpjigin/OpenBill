@@ -25,24 +25,29 @@ const channelLabel = { ADMIN: "admin", LOCAL: "this computer", LAN: "Wi-Fi", PUB
 
 export function BillingApp() {
   const { user, setUser, loading, logout } = useSession();
-
-  if (loading) return null;
-  if (!user) return <LoginPage title={APP_NAME} subtitle="Sign in to start billing" onLoggedIn={setUser} />;
-
-  const canManage = user.role === "ADMIN" || user.role === "MANAGER";
+  const canManage = user?.role === "ADMIN" || user?.role === "MANAGER";
   const [lowStockCount, setLowStockCount] = useState(0);
 
   useEffect(() => {
-    if (!canManage) return;
+    if (!user || !canManage) return;
     const load = () => billingApi.lowStockItems().then((r) => setLowStockCount(r.length)).catch(() => setLowStockCount(0));
     load();
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
-  }, [canManage]);
+  }, [user, canManage]);
+
+  if (loading) return null;
+  if (!user) return <LoginPage title={APP_NAME} subtitle="Sign in to start billing" onLoggedIn={setUser} />;
 
   return (
     <Shell
       subtitle={`${APP_NAME} · web`}
+      mobileTabs={[
+        { to: "/", label: "New bill" },
+        { to: "/invoices", label: "Invoices" },
+        { to: "/customers", label: "Customers" },
+        { to: "#more", label: "More" },
+      ]}
       nav={[
         { to: "/", label: "New bill" },
         { to: "/invoices", label: "Invoices" },

@@ -15,7 +15,7 @@ echo "==> Building web apps"
 (cd "$ROOT/web" && npm ci && npm run build)
 
 echo "==> Building server jar"
-MVN_ARGS="-B package"
+MVN_ARGS="-B clean package"
 if [[ "${SKIP_TESTS:-false}" == "true" ]]; then
   MVN_ARGS="$MVN_ARGS -DskipTests"
 fi
@@ -43,6 +43,8 @@ MODULES="java.base,java.compiler,java.desktop,java.instrument,java.logging,java.
   --compress=zip-6 \
   --output "$OUT/jre"
 
+# jlink output is read-only; desktop bundling copies from dist-server and needs write access.
+chmod -R u+w "$OUT"
 touch "$OUT/.gitkeep"
 echo "==> Done: $OUT"
 du -sh "$OUT" 2>/dev/null || true

@@ -1,7 +1,8 @@
 package app.billing.customer;
 
-import java.util.List;
 import java.util.UUID;
+
+import app.billing.common.PageResult;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,8 +44,16 @@ public class CustomerController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public List<CustomerDto> search(@RequestParam(required = false) String q) {
-        return service.search(q).stream().map(CustomerDto::of).toList();
+    public PageResult<CustomerDto> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        PageResult<Customer> pageResult = service.list(q, page, size);
+        return new PageResult<>(
+                pageResult.items().stream().map(CustomerDto::of).toList(),
+                pageResult.total(),
+                pageResult.page(),
+                pageResult.size());
     }
 
     @GetMapping("/{id}")

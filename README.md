@@ -54,6 +54,18 @@ cd server && mvn -q verify
 cd desktop && npm ci && npm run build   # after ./scripts/build-server.sh
 ```
 
+### Run the desktop app locally
+
+On **macOS or Linux**, one script stops any old OpenBill, rebuilds the bundled server and desktop app, launches it, and checks that the billing website on port 8080 serves the same `index-*.js` as the `server.jar` inside the app (so you are not debugging a stale bundle):
+
+```bash
+./scripts/run-desktop.sh
+```
+
+Needs JDK 21, Maven, Node 20+, Rust, `curl`, `unzip`, and `lsof`. The first run can take several minutes (Maven, `jlink`, and `tauri build`). Admin opens on `http://127.0.0.1:9090`; billing on `http://127.0.0.1:8080`.
+
+On Windows, run `./scripts/build-server.sh` then `cd desktop && npm run build` manually.
+
 ## Signing (optional)
 
 Installers can be signed on CI when repository secrets are set — see [Tauri signing docs](https://v2.tauri.app/distribute/sign/).
@@ -89,7 +101,7 @@ server/    Spring Boot API + serves both web apps
   invoice/   GST math, numbering, immutable invoices
 web/       React: src/admin (desktop admin) and src/billing (billing website)
 desktop/   Tauri shell: starts the server, window, tray
-scripts/   build-server.sh (jar + jlink runtime)
+scripts/   build-server.sh (jar + jlink), run-desktop.sh (rebuild + launch + asset check)
 .github/   CI (every push) and Release (tags)
 ```
 

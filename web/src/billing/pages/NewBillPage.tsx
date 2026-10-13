@@ -58,6 +58,7 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
   const [heldBills, setHeldBills] = useState<HeldBillSummary[]>([]);
   const [showHeldPanel, setShowHeldPanel] = useState(false);
   const [holding, setHolding] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const customerSearchRef = useRef<HTMLInputElement>(null);
   const saveRef = useRef<() => void>(() => {});
@@ -84,7 +85,7 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
       return;
     }
     const t = setTimeout(() => {
-      billingApi.items(q).then(setResults).catch(() => setResults([]));
+      billingApi.items({ q, size: 20 }).then((r) => setResults(r.items)).catch(() => setResults([]));
     }, 150);
     return () => clearTimeout(t);
   }, [query]);
@@ -96,7 +97,7 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
       return;
     }
     const t = setTimeout(() => {
-      billingApi.customers(q).then(setCustomerResults).catch(() => setCustomerResults([]));
+      billingApi.customers({ q, size: 20 }).then((r) => setCustomerResults(r.items)).catch(() => setCustomerResults([]));
     }, 150);
     return () => clearTimeout(t);
   }, [customerQuery, selectedCustomer]);
@@ -160,7 +161,9 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
     e.preventDefault();
     const q = query.trim();
     if (!q) return;
-    const list = results.length ? results : await billingApi.items(q).catch(() => []);
+    const list = results.length
+      ? results
+      : await billingApi.items({ q, size: 20 }).then((r) => r.items).catch(() => []);
     const exact = list.find((i) => i.barcode === q || i.code === q);
     if (exact) add(exact);
     else if (list.length === 1) add(list[0]);
@@ -299,7 +302,7 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
           setError("Could not read this held bill");
           return;
         }
-        const catalog = await billingApi.items();
+        const catalog = await billingApi.itemsAll();
         const byId = new Map(catalog.map((i) => [i.id, i]));
         const nextCart: CartLine[] = [];
         let skipped = 0;
@@ -434,8 +437,86 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
     if (!holding && cart.length > 0) void holdBill();
   };
 
+  const summaryPanel = (
+    <>
+      {autoPlaceOfSupply && customerStateCode ? (
+        <p className="m-0 text-sm text-muted">
+          Auto: {effectiveInterState ? "Other state" : "Within state"}
+          {" — "}
+          {gstStateName(customerStateCode)}
+        </p>
+      ) : (
+        <Segmented
+          label="Place of supply"
+          value={interState ? "inter" : "intra"}
+          options={[
+            { value: "intra", label: "Within state" },
+            { value: "inter", label: "Other state" },
+          ]}
+          onChange={(v) => setInterState(v === "inter")}
+        />
+      )}
+
+      <DiscountInput
+        label="Bill discount"
+        ariaLabel="Bill discount"
+        entry={billDiscount}
+        onChange={setBillDiscount}
+        invalid={billDiscountPaise === null}
+      />
+
+      <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
+        <dt className="text-muted">Gross</dt>
+        <dd className="m-0 text-right font-mono">{formatPaise(totals.gross)}</dd>
+        <dt className="text-muted">Discount</dt>
+        <dd className="m-0 text-right font-mono">{formatPaise(totals.discount)}</dd>
+        <dt className="text-muted">Taxable value</dt>
+        <dd className="m-0 text-right font-mono">{formatPaise(totals.taxable)}</dd>
+        {effectiveInterState ? (
+          <>
+            <dt className="text-muted">IGST</dt>
+            <dd className="m-0 text-right font-mono">{formatPaise(totals.igst)}</dd>
+          </>
+        ) : (
+          <>
+            <dt className="text-muted">CGST</dt>
+            <dd className="m-0 text-right font-mono">{formatPaise(totals.cgst)}</dd>
+            <dt className="text-muted">SGST</dt>
+            <dd className="m-0 text-right font-mono">{formatPaise(totals.sgst)}</dd>
+          </>
+        )}
+        <dt className="text-muted">Round off</dt>
+        <dd className="m-0 text-right font-mono">{formatPaise(totals.roundOff)}</dd>
+      </dl>
+      <div className="flex items-baseline justify-between gap-3 border-t border-line-soft pt-3.5">
+        <span className="text-[15px] font-semibold">Total</span>
+        <span className="font-mono text-3xl font-medium text-brand">{formatPaise(totals.total)}</span>
+      </div>
+
+      <Segmented
+        label="Payment"
+        value={payment}
+        options={[
+          { value: "CASH", label: "Cash" },
+          { value: "UPI", label: "UPI" },
+          { value: "CARD", label: "Card" },
+        ]}
+        onChange={(v) => setPayment(v as PaymentMode)}
+      />
+
+      <ErrorNote message={error} />
+      <Button className="min-h-11" disabled={cart.length === 0 || holding} onClick={() => void holdBill()}>
+        {holding ? "Holding…" : "Hold (F8)"}
+      </Button>
+      <Button variant="primary" className="min-h-11" disabled={cart.length === 0 || saving} onClick={save}>
+        {saving ? "Saving…" : "Save & print (F10)"}
+      </Button>
+    </>
+  );
+
   return (
-    <div className="flex flex-wrap items-start gap-5">
+    <div className="pb-28 lg:pb-0">
+    <div className="flex w-full min-w-0 flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-6">
       {showHeldPanel && (
         <HeldBillsPanel
           bills={heldBills}
@@ -444,7 +525,7 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
           onClose={() => setShowHeldPanel(false)}
         />
       )}
-      <section aria-label="Bill items" className="flex min-w-0 flex-[999_1_520px] flex-col gap-4">
+      <section aria-label="Bill items" className="flex min-w-0 flex-1 flex-col gap-4">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="m-0 text-2xl font-semibold">New bill</h1>
           <div className="flex flex-wrap items-center gap-2">
@@ -512,7 +593,7 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
                 placeholder="Search name, phone or GSTIN — leave empty for walk-in"
                 value={customerQuery}
                 onChange={(e) => setCustomerQuery(e.target.value)}
-                className="min-h-10 min-w-[240px] flex-1 rounded-lg border border-[#b9c2bd] bg-surface px-3 text-sm"
+                className="min-h-11 min-w-0 flex-1 rounded-lg border border-[#b9c2bd] bg-surface px-3 text-base sm:text-sm"
               />
               <Button type="button" className="min-h-10" onClick={() => setShowNewCustomer(true)}>
                 New customer
@@ -583,8 +664,8 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
           )}
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-          <table className="w-full min-w-[720px] border-collapse text-sm">
+        <div className="hidden rounded-xl border border-line bg-surface md:block">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-muted">
                 <th className="px-4 py-2.5 font-medium">#</th>
@@ -669,83 +750,95 @@ export function NewBillPage({ user }: { user: CurrentUser }) {
             </tbody>
           </table>
         </div>
+        <div className="flex flex-col gap-2 md:hidden">
+          {cart.length === 0 && (
+            <p className="rounded-xl border border-line bg-surface px-4 py-6 text-center text-sm text-muted">
+              Scan or search an item to start the bill.
+            </p>
+          )}
+          {pricedLines.map((p, n) => {
+            const l = p.line;
+            const decimal = isDecimalUnit(l.item.unit);
+            const step = decimal ? 250 : 1000;
+            return (
+              <div key={l.item.id} className="rounded-xl border border-line bg-surface p-4 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 font-medium">
+                    {n + 1}. {l.item.name}
+                  </div>
+                  <span className="shrink-0 font-mono font-semibold">{formatPaise(p.gross)}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <span>{l.item.hsn ?? "—"}</span>
+                  <span>{formatPaise(l.item.ratePaise)}</span>
+                  <span>{formatGstRate(l.item.gstRateBp)}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button type="button" aria-label="Decrease qty" onClick={() => bumpQty(l, -step)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-line">
+                    −
+                  </button>
+                  <input
+                    aria-label={`Quantity of ${l.item.name}`}
+                    inputMode={decimal ? "decimal" : "numeric"}
+                    value={formatQty(l.qtyMilli, l.item.unit)}
+                    onChange={(e) => {
+                      const parsed = parseQty(e.target.value, l.item.unit);
+                      if (parsed !== null) setQtyMilli(l.item.id, parsed);
+                    }}
+                    className="min-h-11 w-20 rounded-lg border border-line text-center font-mono text-base"
+                  />
+                  <span className="text-xs">{l.item.unit}</span>
+                  <button type="button" aria-label="Increase qty" onClick={() => bumpQty(l, step)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-line">
+                    +
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <DiscountInput
+                    ariaLabel={`Discount on ${l.item.name}`}
+                    entry={l.discount}
+                    onChange={(d) => setLineDiscount(l.item.id, d)}
+                    invalid={p.discountPaise === null}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
         <p className="m-0 text-xs text-muted">Saved invoices cannot be edited. Corrections will use credit notes.</p>
       </section>
 
-      <aside aria-label="Bill summary" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 rounded-xl border border-line bg-surface p-5">
-        {autoPlaceOfSupply && customerStateCode ? (
-          <p className="m-0 text-sm text-muted">
-            Auto: {effectiveInterState ? "Other state" : "Within state"}
-            {" — "}
-            {gstStateName(customerStateCode)}
-          </p>
-        ) : (
-          <Segmented
-            label="Place of supply"
-            value={interState ? "inter" : "intra"}
-            options={[
-              { value: "intra", label: "Within state" },
-              { value: "inter", label: "Other state" },
-            ]}
-            onChange={(v) => setInterState(v === "inter")}
-          />
-        )}
-
-        <DiscountInput
-          label="Bill discount"
-          ariaLabel="Bill discount"
-          entry={billDiscount}
-          onChange={setBillDiscount}
-          invalid={billDiscountPaise === null}
-        />
-
-        <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
-          <dt className="text-muted">Gross</dt>
-          <dd className="m-0 text-right font-mono">{formatPaise(totals.gross)}</dd>
-          <dt className="text-muted">Discount</dt>
-          <dd className="m-0 text-right font-mono">{formatPaise(totals.discount)}</dd>
-          <dt className="text-muted">Taxable value</dt>
-          <dd className="m-0 text-right font-mono">{formatPaise(totals.taxable)}</dd>
-          {effectiveInterState ? (
-            <>
-              <dt className="text-muted">IGST</dt>
-              <dd className="m-0 text-right font-mono">{formatPaise(totals.igst)}</dd>
-            </>
-          ) : (
-            <>
-              <dt className="text-muted">CGST</dt>
-              <dd className="m-0 text-right font-mono">{formatPaise(totals.cgst)}</dd>
-              <dt className="text-muted">SGST</dt>
-              <dd className="m-0 text-right font-mono">{formatPaise(totals.sgst)}</dd>
-            </>
-          )}
-          <dt className="text-muted">Round off</dt>
-          <dd className="m-0 text-right font-mono">{formatPaise(totals.roundOff)}</dd>
-        </dl>
-        <div className="flex items-baseline justify-between gap-3 border-t border-line-soft pt-3.5">
-          <span className="text-[15px] font-semibold">Total</span>
-          <span className="font-mono text-3xl font-medium text-brand">{formatPaise(totals.total)}</span>
-        </div>
-
-        <Segmented
-          label="Payment"
-          value={payment}
-          options={[
-            { value: "CASH", label: "Cash" },
-            { value: "UPI", label: "UPI" },
-            { value: "CARD", label: "Card" },
-          ]}
-          onChange={(v) => setPayment(v as PaymentMode)}
-        />
-
-        <ErrorNote message={error} />
-        <Button className="min-h-11" disabled={cart.length === 0 || holding} onClick={() => void holdBill()}>
-          {holding ? "Holding…" : "Hold (F8)"}
-        </Button>
-        <Button variant="primary" className="min-h-12" disabled={cart.length === 0 || saving} onClick={save}>
-          {saving ? "Saving…" : "Save & print (F10)"}
-        </Button>
+      <aside
+        aria-label="Bill summary"
+        className="hidden w-full shrink-0 flex-col gap-4 rounded-xl border border-line bg-surface p-5 lg:flex lg:w-[360px] lg:sticky lg:top-6 lg:self-start"
+      >
+        {summaryPanel}
       </aside>
+    </div>
+
+      <div className="fixed bottom-16 left-0 right-0 z-20 flex items-center gap-3 border-t border-line bg-surface px-4 py-3 shadow-lg sm:bottom-0 lg:hidden">
+        <div className="min-w-0 flex-1">
+          <div className="text-xs text-muted">Total</div>
+          <div className="font-mono text-xl font-semibold text-brand">{formatPaise(totals.total)}</div>
+        </div>
+        <Button variant="primary" className="min-h-11 shrink-0 px-4" disabled={cart.length === 0} onClick={() => setSummaryOpen(true)}>
+          Save & print
+        </Button>
+      </div>
+
+      {summaryOpen && (
+        <div className="fixed inset-0 z-30 flex flex-col bg-black/40 lg:hidden">
+          <button type="button" className="min-h-11 flex-1" aria-label="Close summary" onClick={() => setSummaryOpen(false)} />
+          <div className="max-h-[85vh] overflow-y-auto rounded-t-2xl border border-line bg-surface p-5">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h2 className="m-0 text-lg font-semibold">Bill summary</h2>
+              <Button type="button" className="min-h-11" onClick={() => setSummaryOpen(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="flex flex-col gap-4">{summaryPanel}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

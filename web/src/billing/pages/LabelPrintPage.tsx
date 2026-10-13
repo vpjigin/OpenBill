@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ean13Svg } from "../../shared/barcode";
 import { formatPaise } from "../../shared/money";
+import { DataTable, FormPageWrap } from "../../shared/layout";
 import { Button, ErrorNote, PageHeader, errorText } from "../../shared/ui";
 import { billingApi, type Item, type ShopInfo } from "../billingApi";
 import { previewTotals } from "../gst";
@@ -75,7 +76,7 @@ export function LabelPrintPage() {
       nav("/items", { replace: true });
       return;
     }
-    Promise.all([billingApi.items(), billingApi.shop()])
+    Promise.all([billingApi.itemsAll(), billingApi.shop()])
       .then(([all, s]) => {
         const picked = all.filter((i) => state.itemIds.includes(i.id));
         if (picked.length === 0) throw new Error("Selected items not found");
@@ -136,72 +137,75 @@ export function LabelPrintPage() {
           gap: 0;
         }
       `}</style>
-      <div className="no-print">
-        <PageHeader title="Print labels" subtitle="Choose layout and quantities, then print or save as PDF." />
-        <ErrorNote message={error} />
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <Link to="/items" className="text-sm text-brand">
-            ← Back to items
-          </Link>
-          <Button variant="primary" onClick={() => window.print()}>
-            Print
-          </Button>
-        </div>
-        <div className="mb-6 grid max-w-3xl gap-4 rounded-xl border border-line bg-surface p-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium" htmlFor="layout">
-              Layout
-            </label>
-            <select
-              id="layout"
-              value={layoutId}
-              onChange={(e) => setLayoutId(e.target.value as LabelLayoutId)}
-              className="min-h-11 rounded-lg border border-[#b9c2bd] bg-surface px-3 text-sm"
-            >
-              {LAYOUTS.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
+      <div className="no-print w-full min-w-0 overflow-x-hidden">
+        <FormPageWrap>
+          <PageHeader title="Print labels" subtitle="Choose layout and quantities, then print or save as PDF." />
+          <ErrorNote message={error} />
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <Link to="/items" className="min-h-11 inline-flex items-center text-sm text-brand">
+              ← Back to items
+            </Link>
+            <Button variant="primary" className="min-h-11" onClick={() => window.print()}>
+              Print
+            </Button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={fillFromStock}>Set qty from stock</Button>
-          </div>
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase text-muted">
-                <th className="py-2 font-medium">Item</th>
-                <th className="py-2 font-medium">Barcode</th>
-                <th className="py-2 text-right font-medium">Labels</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((i) => (
-                <tr key={i.id} className="border-t border-line-soft">
-                  <td className="py-2">{i.name}</td>
-                  <td className="py-2 font-mono text-[13px]">{i.barcode ?? "—"}</td>
-                  <td className="py-2 text-right">
+          <div className="mb-6 grid w-full min-w-0 gap-4 rounded-xl border border-line bg-surface p-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium" htmlFor="layout">
+                Layout
+              </label>
+              <select
+                id="layout"
+                value={layoutId}
+                onChange={(e) => setLayoutId(e.target.value as LabelLayoutId)}
+                className="min-h-11 w-full rounded-lg border border-[#b9c2bd] bg-surface px-3 text-base sm:text-sm"
+              >
+                {LAYOUTS.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button className="min-h-11" onClick={fillFromStock}>
+                Set qty from stock
+              </Button>
+            </div>
+            <DataTable
+              columns={[
+                { key: "name", header: "Item", mobilePrimary: true, cell: (i) => i.name },
+                { key: "barcode", header: "Barcode", cell: (i) => <span className="font-mono text-[13px]">{i.barcode ?? "—"}</span> },
+                {
+                  key: "qty",
+                  header: "Labels",
+                  className: "text-right",
+                  mobileAmount: true,
+                  cell: (i) => (
                     <input
                       type="number"
                       min={0}
                       max={999}
-                      className="w-20 rounded border border-[#b9c2bd] px-2 py-1 text-right font-mono"
+                      className="min-h-11 w-full max-w-[5rem] rounded border border-[#b9c2bd] px-2 text-right font-mono text-base sm:text-sm"
                       value={qtyById[i.id] ?? 1}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) =>
                         setQtyById({ ...qtyById, [i.id]: Math.max(0, Number(e.target.value) || 0) })
                       }
                     />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="m-0 text-xs text-muted">
-            {expanded.length} label{expanded.length === 1 ? "" : "s"} on {pages.length} sheet
-            {pages.length === 1 ? "" : "s"}.
-          </p>
-        </div>
+                  ),
+                },
+              ]}
+              rows={items}
+              rowKey={(i) => i.id}
+              emptyMessage="No items selected"
+            />
+            <p className="m-0 text-xs text-muted">
+              {expanded.length} label{expanded.length === 1 ? "" : "s"} on {pages.length} sheet
+              {pages.length === 1 ? "" : "s"}.
+            </p>
+          </div>
+        </FormPageWrap>
       </div>
 
       <div className="print-only hidden bg-white">

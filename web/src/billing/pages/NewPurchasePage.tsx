@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { formatPaise, inputToQtyMilli, isDecimalUnit, rupeesToPaise } from "../../shared/money";
+import { FormPageWrap, StatCard, StatGrid } from "../../shared/layout";
 import { Button, ErrorNote, Field, PageHeader, errorText } from "../../shared/ui";
 import { billingApi, type Item, type Supplier } from "../billingApi";
 import { previewTotals } from "../gst";
@@ -39,7 +40,10 @@ export function NewPurchasePage() {
       setSuppliers([]);
       return;
     }
-    billingApi.suppliers(supplierQ).then(setSuppliers).catch(() => setSuppliers([]));
+    billingApi
+      .suppliers({ q: supplierQ, size: 20 })
+      .then((r) => setSuppliers(r.items))
+      .catch(() => setSuppliers([]));
   }, [supplierQ]);
 
   useEffect(() => {
@@ -47,7 +51,7 @@ export function NewPurchasePage() {
       setItems([]);
       return;
     }
-    billingApi.items(itemQ).then(setItems).catch(() => setItems([]));
+    billingApi.items({ q: itemQ, size: 20 }).then((r) => setItems(r.items)).catch(() => setItems([]));
   }, [itemQ]);
 
   const interState = useMemo(() => {
@@ -115,10 +119,10 @@ export function NewPurchasePage() {
   }
 
   return (
-    <>
+    <FormPageWrap>
       <PageHeader title="New purchase" subtitle="Record a supplier bill and add stock" />
       <ErrorNote message={error} />
-      <form className="flex max-w-3xl flex-col gap-4" onSubmit={(e) => void submit(e)}>
+      <form className="flex w-full min-w-0 flex-col gap-4" onSubmit={(e) => void submit(e)}>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Supplier bill no" value={billNo} onChange={(e) => setBillNo(e.target.value)} required />
           <label className="flex flex-col gap-1 text-sm">
@@ -262,21 +266,18 @@ export function NewPurchasePage() {
         </div>
 
         {preview && (
-          <div className="rounded-xl border border-line bg-surface p-4 text-sm">
-            <div className="font-medium">Preview {interState ? "(inter-state)" : "(intra-state)"}</div>
-            <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
-              <dt>Taxable</dt>
-              <dd className="m-0 font-mono">{formatPaise(preview.taxable)}</dd>
-              <dt>Input GST</dt>
-              <dd className="m-0 font-mono">{formatPaise(preview.cgst + preview.sgst + preview.igst)}</dd>
-              <dt>Total</dt>
-              <dd className="m-0 font-mono font-semibold">{formatPaise(preview.total)}</dd>
-            </dl>
+          <div>
+            <div className="mb-2 text-sm font-medium">Preview {interState ? "(inter-state)" : "(intra-state)"}</div>
+            <StatGrid>
+              <StatCard label="Taxable" value={formatPaise(preview.taxable)} />
+              <StatCard label="Input GST" value={formatPaise(preview.cgst + preview.sgst + preview.igst)} />
+              <StatCard label="Total" value={formatPaise(preview.total)} />
+            </StatGrid>
           </div>
         )}
 
-        <div className="flex gap-2">
-          <Button type="submit" disabled={busy}>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" className="min-h-11" disabled={busy}>
             {busy ? "Saving…" : "Save purchase"}
           </Button>
           <Link to="/purchases" className="inline-flex items-center text-sm text-brand">
@@ -284,6 +285,6 @@ export function NewPurchasePage() {
           </Link>
         </div>
       </form>
-    </>
+    </FormPageWrap>
   );
 }

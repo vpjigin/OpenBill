@@ -3,6 +3,10 @@ package app.billing.item;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
+
+import app.billing.common.PageResult;
+
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,9 +56,16 @@ public class ItemController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public List<ItemDto> list(@RequestParam(required = false) String q) {
+    public PageResult<ItemDto> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
         String query = q == null || q.isBlank() ? null : q.trim();
-        return repo.search(query).stream().map(ItemDto::of).toList();
+        int p = Math.max(page, 0);
+        int s = Math.min(Math.max(size, 1), 200);
+        long total = repo.countSearch(query);
+        List<Item> items = repo.search(query, PageRequest.of(p, s));
+        return new PageResult<>(items.stream().map(ItemDto::of).toList(), total, p, s);
     }
 
     @GetMapping("/low-stock")

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { DataTable, Toolbar, ToolbarField } from "../../shared/layout";
 import { formatPaise } from "../../shared/money";
-import { Button, ErrorNote, PageHeader, errorText } from "../../shared/ui";
+import { Button, Card, ErrorNote, PageHeader, errorText } from "../../shared/ui";
 import { billingApi, type PurchaseSummary } from "../billingApi";
 
 function defaultRange() {
@@ -12,6 +13,7 @@ function defaultRange() {
 }
 
 export function PurchasesPage() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<PurchaseSummary[]>([]);
   const [range, setRange] = useState(defaultRange);
   const [error, setError] = useState<string | null>(null);
@@ -34,68 +36,57 @@ export function PurchasesPage() {
         subtitle="Stock in from supplier bills"
         actions={
           <Link to="/purchases/new">
-            <Button>New purchase</Button>
+            <Button className="min-h-11">New purchase</Button>
           </Link>
         }
       />
       <ErrorNote message={error} />
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">From</span>
-          <input
-            type="date"
-            className="rounded-lg border border-line px-2 py-1.5"
-            value={range.from}
-            onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+      <Card
+        actions={
+          <Toolbar>
+            <ToolbarField label="From">
+              <input
+                type="date"
+                className="rounded-lg border border-line px-2"
+                value={range.from}
+                onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+              />
+            </ToolbarField>
+            <ToolbarField label="To">
+              <input
+                type="date"
+                className="rounded-lg border border-line px-2"
+                value={range.to}
+                onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+              />
+            </ToolbarField>
+            <Button variant="secondary" className="min-h-11" onClick={load}>
+              Refresh
+            </Button>
+          </Toolbar>
+        }
+      >
+        <div className="px-2 pb-4 sm:px-4">
+          <DataTable
+            columns={[
+              { key: "bill", header: "Bill no", mobilePrimary: true, cell: (p) => <span className="font-mono">{p.billNo}</span> },
+              { key: "date", header: "Date", cell: (p) => p.billDate },
+              { key: "supplier", header: "Supplier", cell: (p) => p.supplierName },
+              {
+                key: "total",
+                header: "Total",
+                mobileAmount: true,
+                className: "text-right font-mono",
+                cell: (p) => formatPaise(p.totalPaise),
+              },
+            ]}
+            rows={rows}
+            rowKey={(p) => p.id}
+            onRowClick={(p) => navigate(`/purchases/${p.id}`)}
+            emptyMessage="No purchases in this range"
           />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">To</span>
-          <input
-            type="date"
-            className="rounded-lg border border-line px-2 py-1.5"
-            value={range.to}
-            onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
-          />
-        </label>
-        <Button variant="secondary" onClick={load}>
-          Refresh
-        </Button>
-      </div>
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-wider text-muted">
-              <th className="px-4 py-2">Date</th>
-              <th className="px-2 py-2">Supplier</th>
-              <th className="px-2 py-2">Bill no</th>
-              <th className="px-4 py-2 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted">
-                  No purchases in this range
-                </td>
-              </tr>
-            ) : (
-              rows.map((p) => (
-                <tr key={p.id} className="border-t border-line-soft">
-                  <td className="px-4 py-2">{p.billDate}</td>
-                  <td className="px-2 py-2">{p.supplierName}</td>
-                  <td className="px-2 py-2">
-                    <Link to={`/purchases/${p.id}`} className="font-mono text-brand">
-                      {p.billNo}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono">{formatPaise(p.totalPaise)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+        </div>
+      </Card>
     </>
   );
 }

@@ -112,7 +112,7 @@ class MigrationUpgradeTest {
         JsonNode items = body(mvc.perform(auth(get("/api/items"), billing))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         long stockA = 0;
-        for (JsonNode row : items) {
+        for (JsonNode row : items.get("items")) {
             if (ITEM_A.equals(row.get("id").asText())) {
                 stockA = row.get("stockMilli").asLong();
                 break;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { DataTable, FormPageWrap, StickyActionBar } from "../../shared/layout";
 import { formatQty, parseQty } from "../../shared/money";
 import { Button, ErrorNote, PageHeader, errorText } from "../../shared/ui";
 import { billingApi, type Invoice, type RefundMode } from "../billingApi";
@@ -102,71 +103,84 @@ export function CreateCreditNotePage() {
   }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-4">
-      <PageHeader title="Create credit note" subtitle={`Against ${invoice.invoiceNo}`} />
-      {error && <ErrorNote message={error} />}
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[480px] border-collapse text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-wider text-muted">
-              <th className="px-4 py-2.5">Item</th>
-              <th className="px-2 py-2.5 text-right">Returnable</th>
-              <th className="px-4 py-2.5 text-right">Return qty</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((l, i) => (
-              <tr key={l.invoiceLineId} className="border-t border-line-soft">
-                <td className="px-4 py-2.5">{l.name}</td>
-                <td className="px-2 py-2.5 text-right font-mono text-muted">
-                  {formatQty(l.returnable, l.unit)} {l.unit}
-                </td>
-                <td className="px-4 py-2.5 text-right">
-                  <input
-                    className="w-28 rounded-md border border-line px-2 py-1 text-right font-mono"
-                    value={l.qty}
-                    onChange={(e) => {
-                      const next = [...lines];
-                      next[i] = { ...l, qty: e.target.value };
-                      setLines(next);
-                    }}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <FormPageWrap>
+      <div className="flex w-full min-w-0 flex-col gap-4">
+        <PageHeader title="Create credit note" subtitle={`Against ${invoice.invoiceNo}`} />
+        {error && <ErrorNote message={error} />}
+        <div className="rounded-xl border border-line bg-surface p-2 sm:p-4">
+          <DataTable
+            columns={[
+              { key: "item", header: "Item", mobilePrimary: true, cell: (l) => l.name },
+              {
+                key: "ret",
+                header: "Returnable",
+                className: "text-right font-mono text-muted",
+                cell: (l) => `${formatQty(l.returnable, l.unit)} ${l.unit}`,
+              },
+              {
+                key: "qty",
+                header: "Return qty",
+                className: "text-right",
+                cell: (l) => {
+                  const i = lines.findIndex((x) => x.invoiceLineId === l.invoiceLineId);
+                  return (
+                    <input
+                      className="min-h-11 w-full max-w-[8rem] rounded-md border border-line px-2 text-right font-mono text-base sm:text-sm"
+                      value={l.qty}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const next = [...lines];
+                        next[i] = { ...l, qty: e.target.value };
+                        setLines(next);
+                      }}
+                    />
+                  );
+                },
+              },
+            ]}
+            rows={lines}
+            rowKey={(l) => l.invoiceLineId}
+            emptyMessage="No returnable lines"
+          />
+        </div>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">Reason</span>
+          <input
+            className="min-h-11 rounded-lg border border-line px-3 text-base sm:text-sm"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            required
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">Refund mode</span>
+          <select
+            className="min-h-11 rounded-lg border border-line px-3 text-base sm:text-sm"
+            value={refundMode}
+            onChange={(e) => setRefundMode(e.target.value as RefundMode)}
+          >
+            <option value="CASH">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="CARD">Card</option>
+            <option value="CREDIT">Store credit</option>
+          </select>
+        </label>
+        <StickyActionBar>
+          <div className="flex w-full min-w-0 flex-wrap gap-2">
+            <Button
+              variant="primary"
+              className="min-h-11 flex-1 sm:flex-none"
+              disabled={saving || !hasReturn || !reason.trim()}
+              onClick={() => void save()}
+            >
+              {saving ? "Saving…" : "Save credit note"}
+            </Button>
+            <Link to={`/invoices/${invoice.id}`} className="inline-flex min-h-11 items-center text-sm text-brand">
+              Cancel
+            </Link>
+          </div>
+        </StickyActionBar>
       </div>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Reason</span>
-        <input
-          className="rounded-lg border border-line px-3 py-2"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          required
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Refund mode</span>
-        <select
-          className="rounded-lg border border-line px-3 py-2"
-          value={refundMode}
-          onChange={(e) => setRefundMode(e.target.value as RefundMode)}
-        >
-          <option value="CASH">Cash</option>
-          <option value="UPI">UPI</option>
-          <option value="CARD">Card</option>
-          <option value="CREDIT">Store credit</option>
-        </select>
-      </label>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="primary" disabled={saving || !hasReturn || !reason.trim()} onClick={() => void save()}>
-          {saving ? "Saving…" : "Save credit note"}
-        </Button>
-        <Link to={`/invoices/${invoice.id}`} className="inline-flex items-center text-sm text-brand">
-          Cancel
-        </Link>
-      </div>
-    </div>
+    </FormPageWrap>
   );
 }

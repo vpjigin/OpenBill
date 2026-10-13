@@ -182,6 +182,13 @@ export interface Customer {
   version: number;
 }
 
+export interface PageResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 export interface ShopInfo {
   appName: string;
   shopName: string;
@@ -198,14 +205,24 @@ export interface ShopInfo {
 
 export const billingApi = {
   shop: () => api<ShopInfo>("/api/shop"),
-  customers: (q?: string) =>
-    api<Customer[]>(`/api/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  customers: (params?: { q?: string; page?: number; size?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.q?.trim()) sp.set("q", params.q.trim());
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 50));
+    return api<PageResult<Customer>>(`/api/customers?${sp}`);
+  },
   customer: (id: string) => api<Customer>(`/api/customers/${id}`),
   createCustomer: (body: unknown) => api<Customer>("/api/customers", { method: "POST", json: body }),
   updateCustomer: (id: string, body: unknown) =>
     api<Customer>(`/api/customers/${id}`, { method: "PUT", json: body }),
-  suppliers: (q?: string) =>
-    api<Supplier[]>(`/api/suppliers${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  suppliers: (params?: { q?: string; page?: number; size?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.q?.trim()) sp.set("q", params.q.trim());
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 50));
+    return api<PageResult<Supplier>>(`/api/suppliers?${sp}`);
+  },
   createSupplier: (body: unknown) => api<Supplier>("/api/suppliers", { method: "POST", json: body }),
   updateSupplier: (id: string, body: unknown) =>
     api<Supplier>(`/api/suppliers/${id}`, { method: "PUT", json: body }),
@@ -220,7 +237,25 @@ export const billingApi = {
   purchase: (id: string) => api<Purchase>(`/api/purchases/${id}`),
   createPurchase: (body: unknown) => api<Purchase>("/api/purchases", { method: "POST", json: body }),
   cancelPurchase: (id: string) => api<void>(`/api/purchases/${id}/cancel`, { method: "POST" }),
-  items: (q?: string) => api<Item[]>(`/api/items${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  items: (params?: { q?: string; page?: number; size?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.q?.trim()) sp.set("q", params.q.trim());
+    sp.set("page", String(params?.page ?? 0));
+    sp.set("size", String(params?.size ?? 50));
+    return api<PageResult<Item>>(`/api/items?${sp}`);
+  },
+  itemsAll: async (params?: { q?: string }) => {
+    const size = 200;
+    let page = 0;
+    const all: Item[] = [];
+    for (;;) {
+      const r = await billingApi.items({ ...params, page, size });
+      all.push(...r.items);
+      if (all.length >= r.total) break;
+      page += 1;
+    }
+    return all;
+  },
   lowStockItems: () => api<Item[]>("/api/items/low-stock"),
   createItem: (body: unknown) => api<Item>("/api/items", { method: "POST", json: body }),
   updateItem: (id: string, body: unknown) => api<Item>(`/api/items/${id}`, { method: "PUT", json: body }),

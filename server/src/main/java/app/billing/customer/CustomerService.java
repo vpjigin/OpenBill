@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import app.billing.common.ApiException;
+import app.billing.common.PageResult;
 import app.billing.common.GstStates;
 
 @Service
@@ -24,11 +25,13 @@ public class CustomerService {
     }
 
     @Transactional(readOnly = true)
-    public List<Customer> search(String q) {
-        if (q == null || q.isBlank()) {
-            return List.of();
-        }
-        return repo.search(q.trim(), PageRequest.of(0, 20));
+    public PageResult<Customer> list(String q, int page, int size) {
+        String query = q == null || q.isBlank() ? null : q.trim();
+        int p = Math.max(page, 0);
+        int s = Math.min(Math.max(size, 1), 200);
+        long total = repo.countSearch(query);
+        List<Customer> items = repo.search(query, PageRequest.of(p, s));
+        return new PageResult<>(items, total, p, s);
     }
 
     @Transactional(readOnly = true)

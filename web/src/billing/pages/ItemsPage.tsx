@@ -11,9 +11,10 @@ import {
   qtyMilliToInput,
   rupeesToPaise,
 } from "../../shared/money";
-import { Button, Card, ErrorNote, Field, PageHeader, errorText } from "../../shared/ui";
+import { Button, Card, ErrorNote, Field, ListPager, PageHeader, errorText } from "../../shared/ui";
 import { billingApi, type Item } from "../billingApi";
 
+const PAGE_SIZE = 50;
 const GST_RATES = [0, 5, 12, 18, 28];
 const UNITS = ["NOS", "PCS", "BOX", "KG", "G", "LTR", "ML", "MTR"] as const;
 
@@ -37,17 +38,44 @@ function isLowStock(i: Item): boolean {
 export function ItemsPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Item[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState<Item | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q.trim()), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedQ, lowStockOnly]);
+
   const load = useCallback(() => {
-    const fetch = lowStockOnly ? billingApi.lowStockItems() : billingApi.items(q.trim() || undefined);
-    fetch.then(setItems).catch((e) => setError(errorText(e)));
-  }, [q, lowStockOnly]);
+    if (lowStockOnly) {
+      billingApi
+        .lowStockItems()
+        .then((list) => {
+          setItems(list);
+          setTotal(list.length);
+        })
+        .catch((e) => setError(errorText(e)));
+      return;
+    }
+    billingApi
+      .items({ q: debouncedQ || undefined, page, size: PAGE_SIZE })
+      .then((r) => {
+        setItems(r.items);
+        setTotal(r.total);
+      })
+      .catch((e) => setError(errorText(e)));
+  }, [debouncedQ, page, lowStockOnly]);
   useEffect(load, [load]);
 
   function toggleSelected(id: string) {
@@ -151,12 +179,17 @@ export function ItemsPage() {
         subtitle="Rates are before GST unless “Price includes GST” is checked."
       />
       <ErrorNote message={error} />
-      <div className="flex flex-wrap items-start gap-5">
+      <div className="flex w-full min-w-0 flex-col gap-5 xl:flex-row xl:items-stretch">
         <Card
           className="min-w-0 flex-[999_1_520px]"
           title="Items"
           actions={
             <div className="flex flex-wrap items-center gap-2">
+              {!lowStockOnly && (
+                <span className="text-[13px] text-muted">
+                  {total === 1 ? "1 item" : `${total.toLocaleString("en-IN")} items`}
+                </span>
+              )}
               <Button
                 className="min-h-9 px-3 text-[13px]"
                 variant="primary"
@@ -186,8 +219,38 @@ export function ItemsPage() {
             </div>
           }
         >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
+          <div className="flex flex-col gap-2 px-2 pb-2 md:hidden">
+            {items.map((i) => (
+              <div
+                key={i.id}
+                className={`rounded-xl border border-line bg-surface p-4 ${isLowStock(i) ? "bg-amber-500/10" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(i.id)}
+                      onChange={() => toggleSelected(i.id)}
+                      aria-label={`Select ${i.name}`}
+                      className="mt-1 size-5 shrink-0 accent-brand"
+                    />
+                    <span className="min-w-0 font-semibold">{i.name}</span>
+                  </label>
+                  <span className="shrink-0 font-mono text-sm">{formatPaise(i.ratePaise)}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  {i.unit} · HSN {i.hsn ?? "—"} · Stock {formatQty(i.stockMilli, i.unit)}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button className="min-h-11 px-3 text-[13px]" onClick={() => edit(i)}>
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block">
+            <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wider text-muted">
                   <th className="w-10 px-3 py-2.5 font-medium">
@@ -268,13 +331,18 @@ export function ItemsPage() {
                 {items.length === 0 && (
                   <tr className="border-t border-line-soft">
                     <td colSpan={10} className="px-5 py-4 text-muted">
-                      No items yet. Add your first item on the right.
+                      {lowStockOnly
+                        ? "No low-stock items."
+                        : debouncedQ
+                          ? "No matches."
+                          : "No items yet. Add your first item on the right."}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+          {!lowStockOnly && <ListPager page={page} size={PAGE_SIZE} total={total} onPage={setPage} />}
         </Card>
 
         <form onSubmit={submit} className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 rounded-xl border border-line bg-surface p-5">

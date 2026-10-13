@@ -1,7 +1,8 @@
 package app.billing.supplier;
 
-import java.util.List;
 import java.util.UUID;
+
+import app.billing.common.PageResult;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,8 +44,16 @@ public class SupplierController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public List<SupplierDto> search(@RequestParam(required = false) String q) {
-        return service.search(q).stream().map(SupplierDto::of).toList();
+    public PageResult<SupplierDto> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        PageResult<Supplier> pageResult = service.list(q, page, size);
+        return new PageResult<>(
+                pageResult.items().stream().map(SupplierDto::of).toList(),
+                pageResult.total(),
+                pageResult.page(),
+                pageResult.size());
     }
 
     @GetMapping("/{id}")

@@ -28,14 +28,14 @@ export function UserMenuFooter({
         <button
           type="button"
           onClick={() => setShowPassword(true)}
-          className="min-h-10 rounded-lg border border-[#3a4a43] bg-transparent text-[13px] text-side-text hover:bg-side-active"
+          className="min-h-11 rounded-lg border border-[#3a4a43] bg-transparent text-base text-side-text hover:bg-side-active sm:text-[13px]"
         >
           Change password
         </button>
         <button
           type="button"
           onClick={onLogout}
-          className="min-h-10 rounded-lg border border-[#3a4a43] bg-transparent text-[13px] text-side-text hover:bg-side-active"
+          className="min-h-11 rounded-lg border border-[#3a4a43] bg-transparent text-base text-side-text hover:bg-side-active sm:text-[13px]"
         >
           Sign out
         </button>

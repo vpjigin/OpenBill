@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Button, ErrorNote, PageHeader, errorText } from "../../shared/ui";
+import { DataTable, StatCard, StatGrid } from "../../shared/layout";
+import { Button, Card, ErrorNote, PageHeader, errorText } from "../../shared/ui";
 import { adminApi, type BackupFile, type BackupList } from "../adminApi";
 
 function formatBytes(n: number): string {
@@ -98,21 +99,22 @@ export function BackupPage() {
         <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
           <p className="m-0 font-medium">Restore pending — quit and reopen the app</p>
           <p className="mt-1 mb-2 text-muted">Will restore: {list.pendingRestore}</p>
-          <Button variant="secondary" className="min-h-9 text-[13px]" onClick={() => void cancelPending()}>
+          <Button variant="secondary" className="min-h-11 text-[13px]" onClick={() => void cancelPending()}>
             Cancel
           </Button>
         </div>
       )}
 
-      <div className="mb-6 flex flex-wrap items-end gap-3">
-        <div>
-          <div className="text-xs text-muted">Last backup</div>
-          <div className="font-mono text-lg">{formatWhen(list?.lastBackupAt ?? null)}</div>
-        </div>
-        <Button onClick={() => void backUpNow()} disabled={busy}>
+      <StatGrid className="mb-4">
+        <StatCard label="Last backup" value={formatWhen(list?.lastBackupAt ?? null)} />
+        <StatCard label="Backup files" value={list?.backups.length ?? 0} />
+      </StatGrid>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Button className="min-h-11" onClick={() => void backUpNow()} disabled={busy}>
           {busy ? "Working…" : "Back up now"}
         </Button>
-        <Button variant="secondary" onClick={() => void adminApi.openBackupFolder().catch((e) => setError(errorText(e)))}>
+        <Button variant="secondary" className="min-h-11" onClick={() => void adminApi.openBackupFolder().catch((e) => setError(errorText(e)))}>
           Open backup folder
         </Button>
         <label className="inline-flex cursor-pointer items-center">
@@ -123,48 +125,33 @@ export function BackupPage() {
             className="hidden"
             onChange={(e) => void onUpload(e.target.files?.[0])}
           />
-          <Button variant="secondary" type="button" disabled={busy} onClick={() => fileRef.current?.click()}>
+          <Button variant="secondary" type="button" className="min-h-11" disabled={busy} onClick={() => fileRef.current?.click()}>
             Upload backup
           </Button>
         </label>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-wider text-muted">
-              <th className="px-4 py-2">Name</th>
-              <th className="px-2 py-2">Date</th>
-              <th className="px-2 py-2 text-right">Size</th>
-              <th className="px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {!list || list.backups.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted">
-                  No backups yet
-                </td>
-              </tr>
-            ) : (
-              list.backups.map((f) => (
-                <tr key={f.name} className="border-t border-line-soft">
-                  <td className="px-4 py-2 font-mono text-[13px]">{f.name}</td>
-                  <td className="px-2 py-2">{formatWhen(f.createdAt)}</td>
-                  <td className="px-2 py-2 text-right font-mono">{formatBytes(f.size)}</td>
-                  <td className="px-4 py-2 text-right">
-                    {restorable(f) && (
-                      <Button variant="secondary" className="min-h-9 px-3 text-[13px]" onClick={() => void restore(f.name)}>
-                        Restore
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <div className="px-2 pb-4 sm:px-4">
+          <DataTable
+            columns={[
+              { key: "name", header: "Name", mobilePrimary: true, cell: (f) => <span className="font-mono text-[13px]">{f.name}</span> },
+              { key: "date", header: "Date", cell: (f) => formatWhen(f.createdAt) },
+              { key: "size", header: "Size", mobileAmount: true, className: "text-right font-mono", cell: (f) => formatBytes(f.size) },
+            ]}
+            rows={list?.backups ?? []}
+            rowKey={(f) => f.name}
+            emptyMessage="No backups yet"
+            rowActions={(f) =>
+              restorable(f) ? (
+                <Button variant="secondary" className="min-h-11 px-3 text-[13px]" onClick={() => void restore(f.name)}>
+                  Restore
+                </Button>
+              ) : null
+            }
+          />
+        </div>
+      </Card>
 
       <p className="mt-4 text-sm text-muted">
         Automatic backups run about once a day when the app is open.{" "}

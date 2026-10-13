@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { StatGrid, StatCard } from "../../shared/layout";
 import { formatGstRate, formatPaise, formatQty } from "../../shared/money";
 import { Button, ErrorNote, PageHeader, errorText } from "../../shared/ui";
 import { billingApi, type Purchase } from "../billingApi";
@@ -37,14 +38,16 @@ export function PurchaseDetailPage() {
     );
   }
 
+  const inputGst = purchase.cgstPaise + purchase.sgstPaise + purchase.igstPaise;
+
   return (
-    <>
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader
         title={purchase.billNo}
         subtitle={`${purchase.supplierName} · ${purchase.billDate}`}
         actions={
           !purchase.cancelled && (
-            <Button variant="danger" onClick={() => void cancel()}>
+            <Button variant="danger" className="min-h-11" onClick={() => void cancel()}>
               Cancel purchase
             </Button>
           )
@@ -52,13 +55,36 @@ export function PurchaseDetailPage() {
       />
       <ErrorNote message={error} />
       {purchase.cancelled && (
-        <p className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">Cancelled</p>
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">Cancelled</p>
       )}
-      <div className="mb-4 text-sm text-muted">
+      <div className="text-sm text-muted">
         {purchase.interState ? "Inter-state" : "Intra-state"} · Recorded by {purchase.createdByName ?? "—"}
       </div>
-      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
+      <StatGrid>
+        <StatCard label="Taxable" value={formatPaise(purchase.taxablePaise)} />
+        <StatCard label="Input GST" value={formatPaise(inputGst)} />
+        <StatCard label="Total" value={formatPaise(purchase.totalPaise)} />
+      </StatGrid>
+      <div className="flex flex-col gap-2 md:hidden">
+        {purchase.lines.map((l) => (
+          <div key={l.lineNo} className="rounded-xl border border-line bg-surface p-4 text-sm">
+            <div className="flex justify-between gap-2 font-medium">
+              <span>{l.name}</span>
+              <span className="font-mono">{formatPaise(l.totalPaise)}</span>
+            </div>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted">
+              <dt>Qty</dt>
+              <dd className="m-0 text-right font-mono text-ink">{formatQty(l.qtyMilli, l.unit)}</dd>
+              <dt>Cost</dt>
+              <dd className="m-0 text-right font-mono text-ink">{formatPaise(l.costPaise)}</dd>
+              <dt>GST</dt>
+              <dd className="m-0 text-right">{formatGstRate(l.gstRateBp)}</dd>
+            </dl>
+          </div>
+        ))}
+      </div>
+      <div className="hidden rounded-xl border border-line bg-surface md:block">
+        <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-muted">
               <th className="px-4 py-2">Item</th>
@@ -81,21 +107,11 @@ export function PurchaseDetailPage() {
           </tbody>
         </table>
       </div>
-      <dl className="mt-4 grid max-w-sm grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
-        <dt>Taxable</dt>
-        <dd className="m-0 font-mono">{formatPaise(purchase.taxablePaise)}</dd>
-        <dt>Input GST</dt>
-        <dd className="m-0 font-mono">
-          {formatPaise(purchase.cgstPaise + purchase.sgstPaise + purchase.igstPaise)}
-        </dd>
-        <dt>Total</dt>
-        <dd className="m-0 font-mono font-semibold">{formatPaise(purchase.totalPaise)}</dd>
-      </dl>
-      <p className="mt-6">
+      <p className="mt-2">
         <Link to="/purchases" className="text-brand">
           ← All purchases
         </Link>
       </p>
-    </>
+    </div>
   );
 }

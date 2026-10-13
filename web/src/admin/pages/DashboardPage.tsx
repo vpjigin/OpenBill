@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { formatPaise } from "../../shared/money";
-import { PageHeader } from "../../shared/ui";
+import { StatGrid } from "../../shared/layout";
+import { PageHeader, StatCard } from "../../shared/ui";
 import { OpenBillingButton } from "../AdminApp";
 import { AccessTiles } from "../AccessTiles";
 import { adminApi, type ActivityEntry, type AttentionItem, type Summary } from "../adminApi";
@@ -90,14 +91,14 @@ export function DashboardPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
           <h2 className="m-0 text-[17px] font-semibold">Today at a glance</h2>
-          <span className="text-[13px] text-muted">Read-only. Full reports are in the billing website.</span>
+          <span className="min-w-0 text-[13px] text-muted">Read-only. Full reports are in the billing website.</span>
         </div>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3.5">
-          <Stat label="Bills today" value={summary ? String(summary.billsToday) : "—"} />
-          <Stat label="Sales today" value={summary ? formatPaise(summary.salesTodayPaise) : "—"} />
-          <Stat label="Devices signed in" value={summary ? String(summary.devicesOnline) : "—"} />
+        <StatGrid>
+          <StatCard label="Bills today" value={summary ? String(summary.billsToday) : "—"} />
+          <StatCard label="Sales today" value={summary ? formatPaise(summary.salesTodayPaise) : "—"} />
+          <StatCard label="Devices signed in" value={summary ? String(summary.devicesOnline) : "—"} />
           <Stat
             label="Last backup"
             value={summary ? formatBackupWhen(summary.lastBackupAt) : "—"}
@@ -108,7 +109,7 @@ export function DashboardPage() {
               </button>
             }
           />
-        </div>
+        </StatGrid>
       </section>
     </>
   );

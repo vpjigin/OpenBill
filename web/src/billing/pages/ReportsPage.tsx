@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatGstRate, formatPaise, formatQty } from "../../shared/money";
+import { StatGrid, StatCard, TabPills, Toolbar, ToolbarField } from "../../shared/layout";
 import { Button, ErrorNote, PageHeader, errorText } from "../../shared/ui";
 import { ReceiptPrintPanel } from "../ReceiptPrintPanel";
 import { usePrintLayout } from "../usePrintLayout";
@@ -194,43 +195,35 @@ export function ReportsPage() {
       <div className="no-print">
         <PageHeader title="Reports" subtitle="Day-end, sales and HSN (GST returns)" />
         <ErrorNote message={error} />
-        <div className="mb-4 flex flex-wrap gap-2">
-          {(
-            [
-              ["day-end", "Day-end"],
-              ["sales", "Sales"],
-              ["hsn", "HSN summary"],
-              ["gstr1", "GSTR-1"],
-              ["einvoice", "E-invoice"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`min-h-10 rounded-lg px-4 text-sm font-semibold ${
-                tab === id ? "bg-brand text-white" : "border border-line bg-surface"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <TabPills
+          tabs={[
+            { id: "day-end", label: "Day-end" },
+            { id: "sales", label: "Sales" },
+            { id: "hsn", label: "HSN summary" },
+            { id: "gstr1", label: "GSTR-1" },
+            { id: "einvoice", label: "E-invoice" },
+          ]}
+          active={tab}
+          onChange={(id) => setTab(id as Tab)}
+        />
 
         {tab === "day-end" && (
-          <div className="mb-4 flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted">Date</span>
-              <input type="date" className="rounded-lg border border-line px-2 py-1.5" value={dayDate} onChange={(e) => setDayDate(e.target.value)} />
-            </label>
-            <Button onClick={loadDayEnd}>Refresh</Button>
-            <Button onClick={() => window.print()}>Print</Button>
+          <Toolbar className="mb-4">
+            <ToolbarField label="Date">
+              <input type="date" className="rounded-lg border border-line px-2" value={dayDate} onChange={(e) => setDayDate(e.target.value)} />
+            </ToolbarField>
+            <Button className="min-h-11" onClick={loadDayEnd}>
+              Refresh
+            </Button>
+            <Button className="min-h-11" onClick={() => window.print()}>
+              Print
+            </Button>
             <LayoutToggle layout={layout} onChange={setLayout} />
-          </div>
+          </Toolbar>
         )}
 
         {tab === "gstr1" && (
-          <div className="max-w-lg space-y-3">
+          <div className="w-full min-w-0 space-y-3">
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-muted">Return month</span>
@@ -252,7 +245,7 @@ export function ReportsPage() {
         )}
 
         {tab === "einvoice" && (
-          <div className="max-w-2xl space-y-3">
+          <div className="w-full min-w-0 space-y-3">
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-muted">From</span>
@@ -312,15 +305,21 @@ export function ReportsPage() {
         {tab === "day-end" && dayEnd && (
           <>
             <ReceiptPrintPanel kind="day-end" dayEndDate={dayDate} />
-            <DayEndScreen report={dayEnd} layout={layout} />
+            <DayEndScreen report={dayEnd} />
           </>
         )}
 
         {tab === "sales" && (
-          <SalesTable rows={salesRows} totals={salesTotals} />
+          <div className="w-full min-w-0">
+            <SalesTable rows={salesRows} totals={salesTotals} />
+          </div>
         )}
 
-        {tab === "hsn" && <HsnTable rows={hsnRows} />}
+        {tab === "hsn" && (
+          <div className="w-full min-w-0">
+            <HsnTable rows={hsnRows} />
+          </div>
+        )}
       </div>
 
       {tab === "day-end" && dayEnd && (
@@ -332,17 +331,24 @@ export function ReportsPage() {
   );
 }
 
-function DayEndScreen({ report, layout }: { report: DayEndReport; layout: "80mm" | "a4" }) {
+function DayEndScreen({ report }: { report: DayEndReport }) {
   return (
-    <div className={layout === "80mm" ? "max-w-[80mm]" : "max-w-3xl"}>
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <TotalsCards totals={report.totals} />
-      <PurchaseBlock purchases={report.purchases} />
-      <ModeTable report={report} />
-      {(report.firstInvoiceNo || report.lastInvoiceNo) && (
-        <p className="mt-3 text-sm text-muted">
-          Invoices: {report.firstInvoiceNo ?? "—"} … {report.lastInvoiceNo ?? "—"}
-        </p>
-      )}
+      <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-stretch">
+        <section className="min-w-0 flex-[2] lg:w-2/3">
+          <h2 className="m-0 mb-2 text-base font-semibold">Payment modes</h2>
+          <ModeTable report={report} />
+          {(report.firstInvoiceNo || report.lastInvoiceNo) && (
+            <p className="mt-3 text-sm text-muted">
+              Invoices {report.firstInvoiceNo ?? "—"} … {report.lastInvoiceNo ?? "—"}
+            </p>
+          )}
+        </section>
+        <section className="min-w-0 flex-1 lg:w-1/3">
+          <PurchaseBlock purchases={report.purchases} />
+        </section>
+      </div>
     </div>
   );
 }
@@ -362,29 +368,22 @@ function DayEndPrint({ report, layout }: { report: DayEndReport; layout: "80mm" 
 
 function TotalsCards({ totals }: { totals: ReportTotals }) {
   return (
-    <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+    <StatGrid className="mb-4">
       <StatCard label="Bills" value={String(totals.billsCount)} />
       <StatCard label="Total sales" value={formatPaise(totals.totalPaise)} />
       <StatCard label="Discounts" value={formatPaise(totals.discountPaise)} />
       <StatCard label="GST" value={formatPaise(totals.cgstPaise + totals.sgstPaise + totals.igstPaise)} />
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-line bg-surface px-4 py-3">
-      <div className="text-xs text-muted">{label}</div>
-      <div className="font-mono text-lg font-medium">{value}</div>
-    </div>
+    </StatGrid>
   );
 }
 
 function PurchaseBlock({ purchases }: { purchases: PurchaseTotals }) {
-  if (purchases.count === 0) return null;
   return (
-    <div className="mb-4 rounded-xl border border-line bg-surface px-4 py-3">
-      <h3 className="m-0 mb-2 text-sm font-semibold">Purchases (input GST)</h3>
+    <div className="h-full rounded-xl border border-line bg-surface px-4 py-3">
+      <h2 className="m-0 mb-2 text-base font-semibold">Purchases (input GST)</h2>
+      {purchases.count === 0 ? (
+        <p className="m-0 text-sm text-muted">No purchases recorded for this day.</p>
+      ) : (
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
         <dt>Bills</dt>
         <dd className="m-0 text-right font-mono">{purchases.count}</dd>
@@ -397,6 +396,7 @@ function PurchaseBlock({ purchases }: { purchases: PurchaseTotals }) {
         <dt>Total</dt>
         <dd className="m-0 text-right font-mono font-semibold">{formatPaise(purchases.totalPaise)}</dd>
       </dl>
+      )}
     </div>
   );
 }
@@ -450,8 +450,27 @@ function ModeTable({ report, compact }: { report: DayEndReport; compact?: boolea
   }
 
   return (
-    <div className={`overflow-x-auto rounded-xl border border-line bg-surface ${compact ? "text-[11px]" : "text-sm"}`}>
-      <table className="w-full min-w-[480px] border-collapse">
+    <div className="w-full min-w-0" data-testid="data-table">
+      <div className={`flex w-full min-w-0 flex-col gap-2 md:hidden ${compact ? "text-[11px]" : "text-sm"}`}>
+        {ordered.map((mode) => {
+          const cr = creditMap.get(mode);
+          return (
+            <div key={mode} className="rounded-xl border border-line bg-surface p-3">
+              <div className="font-medium">{mode}</div>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                <dt className="text-muted">Sales</dt>
+                <dd className="m-0 text-right font-mono">{formatPaise(salesMap.get(mode) ?? 0)}</dd>
+                <dt className="text-muted">Refunds</dt>
+                <dd className="m-0 text-right font-mono">{cr ? `${cr.count} · ${formatPaise(cr.totalPaise)}` : "—"}</dd>
+                <dt className="text-muted">Net</dt>
+                <dd className="m-0 text-right font-mono font-semibold">{formatPaise(netMap.get(mode) ?? (salesMap.get(mode) ?? 0))}</dd>
+              </dl>
+            </div>
+          );
+        })}
+      </div>
+      <div className={`hidden w-full min-w-0 overflow-x-auto rounded-xl border border-line bg-surface md:block ${compact ? "text-[11px]" : "text-sm"}`}>
+      <table className="w-full border-collapse">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-muted">
             <th className="px-4 py-2">Mode</th>
@@ -477,12 +496,13 @@ function ModeTable({ report, compact }: { report: DayEndReport; compact?: boolea
         </tbody>
       </table>
     </div>
+    </div>
   );
 }
 
 function SalesTable({ rows, totals }: { rows: DailySalesRow[]; totals: ReportTotals }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+    <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-line bg-surface" data-testid="data-table">
       <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-muted">
@@ -534,7 +554,7 @@ function SalesTable({ rows, totals }: { rows: DailySalesRow[]; totals: ReportTot
 
 function HsnTable({ rows }: { rows: HsnRow[] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+    <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-line bg-surface" data-testid="data-table">
       <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-muted">

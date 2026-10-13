@@ -63,7 +63,7 @@ function allocateBillDiscount(nets: number[], billDiscountPaise: number): number
     remainders.push({ index: i, fraction: exact - floor });
   }
 
-  let leftover = billDiscountPaise - assigned;
+  const leftover = billDiscountPaise - assigned;
   remainders.sort((a, b) => b.fraction - a.fraction || a.index - b.index);
   for (let k = 0; k < leftover; k++) {
     alloc[remainders[k].index]++;

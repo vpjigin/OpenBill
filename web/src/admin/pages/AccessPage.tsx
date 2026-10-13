@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { APP_NAME } from "../../shared/brand";
+import { DataTable } from "../../shared/layout";
 import { Button, Card, PageHeader } from "../../shared/ui";
 import { AccessTiles } from "../AccessTiles";
 import { adminApi, type Device } from "../adminApi";
@@ -25,47 +26,48 @@ export function AccessPage() {
         subtitle={`${APP_NAME} bills in the browser from this computer. Data never leaves this PC.`}
       />
       <AccessTiles />
-      <Card title="Signed-in devices" actions={<span className="text-[13px] text-muted">Stopping a channel signs out its devices</span>}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wider text-muted">
-                <th className="px-5 py-2.5 font-medium">User</th>
-                <th className="px-3 py-2.5 font-medium">Via</th>
-                <th className="px-3 py-2.5 font-medium">IP</th>
-                <th className="px-3 py-2.5 font-medium">Device</th>
-                <th className="px-3 py-2.5 font-medium">Last seen</th>
-                <th className="px-5 py-2.5 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {devices.length === 0 && (
-                <tr className="border-t border-line-soft">
-                  <td colSpan={6} className="px-5 py-4 text-muted">
-                    No one is signed in to the billing website.
-                  </td>
-                </tr>
-              )}
-              {devices.map((d) => (
-                <tr key={d.id} className="border-t border-line-soft">
-                  <td className="px-5 py-3">
+      <Card actions={<span className="text-[13px] text-muted">Stopping a channel signs out its devices</span>}>
+        <div className="px-2 pb-4 sm:px-4">
+          <h2 className="m-0 mb-3 px-2 text-base font-semibold sm:px-0">Signed-in devices</h2>
+          <DataTable
+            columns={[
+              {
+                key: "user",
+                header: "User",
+                mobilePrimary: true,
+                cell: (d) => (
+                  <>
                     {d.userName} <span className="text-xs text-muted">· {d.role.toLowerCase()}</span>
-                  </td>
-                  <td className="px-3 py-3">{via[d.channel]}</td>
-                  <td className="px-3 py-3 font-mono text-[13px]">{d.ip ?? "—"}</td>
-                  <td className="max-w-[220px] truncate px-3 py-3 text-muted" title={d.userAgent ?? ""}>
+                  </>
+                ),
+              },
+              { key: "via", header: "Via", cell: (d) => via[d.channel] },
+              { key: "ip", header: "IP", hideOnMobile: true, cell: (d) => <span className="font-mono text-[13px]">{d.ip ?? "—"}</span> },
+              {
+                key: "device",
+                header: "Device",
+                hideOnMobile: true,
+                cell: (d) => (
+                  <span className="max-w-[220px] truncate text-muted" title={d.userAgent ?? ""}>
                     {shortAgent(d.userAgent)}
-                  </td>
-                  <td className="px-3 py-3">{new Date(d.lastSeen).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</td>
-                  <td className="px-5 py-3 text-right">
-                    <Button variant="danger" className="min-h-9 px-3 text-[13px]" onClick={() => adminApi.signOutDevice(d.id).then(load)}>
-                      Sign out
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                ),
+              },
+              {
+                key: "seen",
+                header: "Last seen",
+                cell: (d) => new Date(d.lastSeen).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+              },
+            ]}
+            rows={devices}
+            rowKey={(d) => d.id}
+            emptyMessage="No one is signed in to the billing website."
+            rowActions={(d) => (
+              <Button variant="danger" className="min-h-11 px-3 text-[13px]" onClick={() => void adminApi.signOutDevice(d.id).then(load)}>
+                Sign out
+              </Button>
+            )}
+          />
         </div>
       </Card>
     </>

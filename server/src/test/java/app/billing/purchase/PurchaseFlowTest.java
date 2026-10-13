@@ -85,7 +85,7 @@ class PurchaseFlowTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         long stock = 0;
         long cost = 0;
-        for (JsonNode row : itemAfter) {
+        for (JsonNode row : itemAfter.get("items")) {
             if (itemId.equals(row.get("id").asText())) {
                 stock = row.get("stockMilli").asLong();
                 cost = row.get("costPaise").asLong();
@@ -104,7 +104,7 @@ class PurchaseFlowTest {
 
         JsonNode itemCancelled = body(mvc.perform(auth(get("/api/items"), billing))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        for (JsonNode row : itemCancelled) {
+        for (JsonNode row : itemCancelled.get("items")) {
             if (itemId.equals(row.get("id").asText())) {
                 assertThat(row.get("stockMilli").asLong()).isEqualTo(5_000);
                 assertThat(row.get("costPaise").asLong()).isZero();
@@ -135,7 +135,7 @@ class PurchaseFlowTest {
         JsonNode afterSecond = body(mvc.perform(auth(get("/api/items"), billing))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         long costAfterSecond = 0;
-        for (JsonNode row : afterSecond) {
+        for (JsonNode row : afterSecond.get("items")) {
             if (item2Id.equals(row.get("id").asText())) {
                 costAfterSecond = row.get("costPaise").asLong();
                 break;
@@ -146,7 +146,7 @@ class PurchaseFlowTest {
                 .andExpect(status().isOk());
         JsonNode afterCancelSecond = body(mvc.perform(auth(get("/api/items"), billing))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        for (JsonNode row : afterCancelSecond) {
+        for (JsonNode row : afterCancelSecond.get("items")) {
             if (item2Id.equals(row.get("id").asText())) {
                 assertThat(row.get("costPaise").asLong()).isEqualTo(30_000);
                 break;
