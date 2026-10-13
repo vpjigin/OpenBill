@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* Bundled fonts: the app must look right with no internet. */
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-ground: #f3f4f1;
+  --color-surface: #ffffff;
+  --color-ink: #1b1f1d;
+  --color-muted: #55615b;
+  --color-line: #dde2de;
+  --color-line-soft: #eef1ef;
+  --color-brand: #0b5e47;
+  --color-brand-strong: #073f30;
+  --color-brand-soft: #eaf5f0;
+  --color-accent: #2fa37e;
+  --color-side: #16201c;
+  --color-side-active: #24332d;
+  --color-side-text: #d9e2dd;
+  --color-side-muted: #93a59c;
+  --color-danger: #8a2b1c;
+  --color-danger-line: #d8b4ac;
+  --color-warn-bg: #fff4e0;
+  --color-warn-ink: #6b4300;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white;
+  }
+}

@@ -1,0 +1,159 @@
+name: Release
+
+# Push a tag like v0.1.0 (matching "version" in desktop/src-tauri/tauri.conf.json).
+# Builds installers on every OS and attaches them to a draft GitHub Release:
+#   Windows  .msi / .exe        macOS  .dmg (Apple Silicon + Intel)
+#   Linux    .deb / .rpm / .AppImage
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  actionlint:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/actionlint@v1.7.10
+
+  build:
+    needs: [actionlint]
+    if: ${{ always() && (needs.actionlint.result == 'success' || needs.actionlint.result == 'skipped') }}
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            java-arch: x64
+            rust-target: ""
+            args: ""
+          - name: macOS Apple Silicon
+            os: macos-latest
+            java-arch: aarch64
+            rust-target: aarch64-apple-darwin
+            args: "--target aarch64-apple-darwin"
+          - name: macOS Intel
+            # Built on the Apple Silicon runner: x64 JDK (runs under Rosetta) + x86_64 Rust target.
+            os: macos-latest
+            java-arch: x64
+            rust-target: x86_64-apple-darwin
+            args: "--target x86_64-apple-darwin"
+          - name: Linux x64
+            # Oldest supported runner = widest glibc compatibility for the .deb/.AppImage.
+            os: ubuntu-22.04
+            java-arch: x64
+            rust-target: ""
+            args: ""
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          architecture: ${{ matrix.java-arch }}
+          cache: maven
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+          key: ${{ matrix.rust-target }}
+
+      - name: Linux libraries for Tauri
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
+
+      - name: Build server jar + bundled Java runtime
+        shell: bash
+        env:
+          SKIP_TESTS: "true" # tests run in CI on every push
+        run: ./scripts/build-server.sh
+
+      - name: Bundle cloudflared
+        shell: bash
+        run: |
+          case "${{ matrix.os }}" in
+            windows-latest) ./scripts/fetch-cloudflared.sh windows amd64 ;;
+            ubuntu-22.04)   ./scripts/fetch-cloudflared.sh linux amd64 ;;
+            macos-latest)
+              if [[ -n "${{ matrix.rust-target }}" && "${{ matrix.rust-target }}" == "x86_64-apple-darwin" ]]; then
+                ./scripts/fetch-cloudflared.sh darwin amd64
+              else
+                ./scripts/fetch-cloudflared.sh darwin arm64
+              fi
+              ;;
+            *) echo "No cloudflared mapping for ${{ matrix.os }}" >&2; exit 1 ;;
+          esac
+
+      - name: Install desktop tooling
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build installers (dry run / no tag)
+        if: github.event_name == 'workflow_dispatch' || !startsWith(github.ref, 'refs/tags/')
+        working-directory: desktop
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run build -- ${{ matrix.args }}
+
+      - name: Upload installers (dry run / no tag)
+        if: github.event_name == 'workflow_dispatch' || !startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.name }}
+          path: |
+            desktop/src-tauri/target/release/bundle/**/*
+            desktop/src-tauri/target/${{ matrix.rust-target }}/release/bundle/**/*
+          if-no-files-found: error
+
+      - name: Publish draft GitHub Release (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: desktop
+          tagName: v__VERSION__
+          releaseName: "v__VERSION__"
+          releaseBody: |
+            Download the installer for your computer below.
+            - Windows: .msi or -setup.exe
+            - macOS: .dmg (aarch64 = Apple Silicon M1/M2/M3, x64 = Intel). Unsigned builds: right-click the app → Open the first time.
+            - Linux: .deb (Ubuntu/Debian), .rpm (Fedora), or .AppImage (any distro)
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

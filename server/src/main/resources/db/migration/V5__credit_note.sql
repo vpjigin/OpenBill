@@ -1,0 +1,55 @@
+CREATE TABLE credit_note (
+    id                    TEXT    PRIMARY KEY,
+    created_at            INTEGER NOT NULL,
+    updated_at            INTEGER NOT NULL,
+    version               INTEGER NOT NULL DEFAULT 0,
+    deleted_at            INTEGER,
+    cn_no                 TEXT    NOT NULL UNIQUE,
+    fy                    TEXT    NOT NULL,
+    seq                   INTEGER NOT NULL,
+    cn_date               INTEGER NOT NULL,
+    invoice_id            TEXT    NOT NULL REFERENCES invoice (id),
+    invoice_no            TEXT    NOT NULL,
+    customer_id           TEXT    REFERENCES customer (id),
+    customer_name         TEXT,
+    customer_gstin        TEXT,
+    customer_state_code   TEXT,
+    inter_state           INTEGER NOT NULL,
+    reason                TEXT    NOT NULL,
+    refund_mode           TEXT    NOT NULL,
+    taxable_paise         INTEGER NOT NULL,
+    cgst_paise            INTEGER NOT NULL,
+    sgst_paise            INTEGER NOT NULL,
+    igst_paise            INTEGER NOT NULL,
+    round_off_paise       INTEGER NOT NULL,
+    total_paise           INTEGER NOT NULL,
+    created_by            TEXT    NOT NULL REFERENCES app_user (id),
+    channel               TEXT    NOT NULL,
+    UNIQUE (fy, seq)
+);
+CREATE INDEX idx_credit_note_date ON credit_note (cn_date);
+CREATE INDEX idx_credit_note_invoice ON credit_note (invoice_id);
+
+CREATE TABLE credit_note_line (
+    id               TEXT    PRIMARY KEY,
+    created_at       INTEGER NOT NULL,
+    updated_at       INTEGER NOT NULL,
+    version          INTEGER NOT NULL DEFAULT 0,
+    deleted_at       INTEGER,
+    credit_note_id   TEXT    NOT NULL REFERENCES credit_note (id),
+    invoice_line_id  TEXT    NOT NULL REFERENCES invoice_line (id),
+    line_no          INTEGER NOT NULL,
+    item_id          TEXT    REFERENCES item (id),
+    name             TEXT    NOT NULL,
+    hsn              TEXT,
+    unit             TEXT    NOT NULL,
+    qty_milli        INTEGER NOT NULL CHECK (qty_milli > 0),
+    rate_paise       INTEGER NOT NULL,
+    gst_rate_bp      INTEGER NOT NULL,
+    taxable_paise    INTEGER NOT NULL,
+    cgst_paise       INTEGER NOT NULL,
+    sgst_paise       INTEGER NOT NULL,
+    igst_paise       INTEGER NOT NULL,
+    total_paise      INTEGER NOT NULL
+);
+CREATE INDEX idx_credit_note_line_invoice_line ON credit_note_line (invoice_line_id);

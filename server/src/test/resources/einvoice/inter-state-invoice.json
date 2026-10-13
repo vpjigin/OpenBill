@@ -1,0 +1,57 @@
+[ {
+  "Version" : "1.1",
+  "TranDtls" : {
+    "TaxSch" : "GST",
+    "SupTyp" : "B2B"
+  },
+  "DocDtls" : {
+    "Typ" : "INV",
+    "No" : "INV/26-27/000102",
+    "Dt" : "16/01/2026"
+  },
+  "SellerDtls" : {
+    "Gstin" : "32AAACL1234C1Z5",
+    "LglNm" : "Lighthouse Stores",
+    "TrdNm" : "Lighthouse Stores",
+    "Addr1" : "Beach Road, Trivandrum",
+    "Loc" : "",
+    "Pin" : "695001",
+    "Stcd" : "32",
+    "Ph" : "4711234567"
+  },
+  "BuyerDtls" : {
+    "Gstin" : "29AABCT1332L1Z6",
+    "LglNm" : "Tech Karnataka",
+    "TrdNm" : "Tech Karnataka",
+    "Pos" : "29",
+    "Addr1" : "Indiranagar",
+    "Loc" : "",
+    "Pin" : "560038",
+    "Stcd" : "29"
+  },
+  "ItemList" : [ {
+    "SlNo" : "1",
+    "PrdDesc" : "Cable roll",
+    "IsServc" : "N",
+    "HsnCd" : "8544",
+    "Qty" : 1.0,
+    "Unit" : "MTR",
+    "UnitPrice" : 450.0,
+    "TotAmt" : 450.0,
+    "Discount" : 0.0,
+    "AssAmt" : 450.0,
+    "GstRt" : 12.0,
+    "IgstAmt" : 54.0,
+    "CgstAmt" : 0.0,
+    "SgstAmt" : 0.0,
+    "TotItemVal" : 504.0
+  } ],
+  "ValDtls" : {
+    "AssVal" : 450.0,
+    "CgstVal" : 0.0,
+    "SgstVal" : 0.0,
+    "IgstVal" : 54.0,
+    "RndOffAmt" : 0.0,
+    "TotInvVal" : 504.0
+  }
+} ]

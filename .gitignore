@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+server/target/
+server/src/main/resources/static/
+dist-server/*
+!dist-server/.gitkeep
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
+# Local data from dev runs
+*.db
+*.db-wal
+*.db-shm
+logs/
+
+# Editors / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+actionlint

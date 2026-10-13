@@ -1,0 +1,1 @@
+ALTER TABLE item ADD COLUMN reorder_level_milli INTEGER NOT NULL DEFAULT 0;

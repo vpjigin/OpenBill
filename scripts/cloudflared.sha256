@@ -1,0 +1,6 @@
+# SHA-256 of cloudflared release binaries (see CLOUDFLARED_VERSION in fetch-cloudflared.sh).
+# Format: <os>-<arch> <hex>
+windows-amd64 86aee4017b26625cee8484c113558f48effa4cd47f7aa05fcf425604e5d2b23c
+linux-amd64 d33ff2d14475178d2012c2c56beba87389ac5ded27649519f198a7d3134a99db
+darwin-amd64 0560c9ab7281ac3f746055323623ed23bc0405b6dab9400474020cba33a978da
+darwin-arm64 72edfd3eea463aef4d5cb89e2e209cecb048cc756c2b01915de2e0ad7cb39830

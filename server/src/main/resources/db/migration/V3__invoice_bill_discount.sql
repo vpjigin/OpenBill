@@ -1,0 +1,1 @@
+ALTER TABLE invoice ADD COLUMN bill_discount_paise INTEGER NOT NULL DEFAULT 0;

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Starting…</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #f3f4f1; color: #1b1f1d;
+      }
+      .box { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding: 24px; }
+      .spin { width: 36px; height: 36px; border-radius: 50%; border: 4px solid #dde2de; border-top-color: #0b5e47; animation: s 0.9s linear infinite; }
+      @keyframes s { to { transform: rotate(360deg); } }
+      p { margin: 0; color: #55615b; font-size: 14px; max-width: 420px; line-height: 1.5; }
+      h1 { margin: 0; font-size: 20px; font-weight: 600; }
+      .err { display: none; color: #8a2b1c; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="spin" id="spin" aria-hidden="true"></div>
+      <h1>Starting the billing server…</h1>
+      <p id="msg">This takes a few seconds the first time.</p>
+      <p class="err" id="err">The server did not start. Restart the app. If it keeps happening, check the log file in the app's data folder (logs/server.log).</p>
+    </div>
+    <script>
+      // Wait for the bundled server, then hand the window over to the admin app.
+      // 127.0.0.1 (not "localhost") so macOS App Transport Security allows plain http.
+      const ADMIN_BASE = "http://127.0.0.1:9090";
+      const BILLING_HEALTH = "http://127.0.0.1:8080/api/health";
+      const DESKTOP_SECRET = window.__BILLING_ADMIN_SECRET__ || "";
+      const started = Date.now();
+      function adminEntry() {
+        if (DESKTOP_SECRET) {
+          return ADMIN_BASE + "/__desktop?secret=" + encodeURIComponent(DESKTOP_SECRET);
+        }
+        return ADMIN_BASE + "/";
+      }
+      async function poll() {
+        try {
+          const res = await fetch(BILLING_HEALTH, { cache: "no-store" });
+          if (res.ok) {
+            location.replace(adminEntry());
+            return;
+          }
+        } catch (_) {
+          /* not up yet */
+        }
+        if (Date.now() - started > 90000) {
+          document.getElementById("spin").style.display = "none";
+          document.getElementById("msg").style.display = "none";
+          document.getElementById("err").style.display = "block";
+          return;
+        }
+        setTimeout(poll, 500);
+      }
+      poll();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,52 @@
+app:
+  name: Billing
+  # Set by the desktop shell (APP_DATA_DIR). Falls back to ~/.billing-app for dev runs.
+  data-dir: ${APP_DATA_DIR:${user.home}/.billing-app}
+  # Admin UI + admin API. Always bound to 127.0.0.1 only.
+  admin-port: 9090
+  # Billing website. 127.0.0.1 always; LAN addresses added when Wi-Fi access starts.
+  billing-port: 8080
+  # Loopback-only port the public tunnel (cloudflared) forwards to.
+  public-port: 8081
+  # Optional path to cloudflared. Empty = look in <data-dir>/bin, then PATH.
+  cloudflared-path: ${CLOUDFLARED_PATH:}
+  # Bundled tools next to server.jar (desktop sets APP_BIN_DIR).
+  bin-dir: ${APP_BIN_DIR:}
+  # Set by the desktop shell (32-byte hex). When empty, admin UI is reachable from any browser on :9090.
+  admin-secret: ${APP_ADMIN_SECRET:}
+
+server:
+  address: 127.0.0.1
+  port: ${app.admin-port}
+  shutdown: graceful
+
+spring:
+  main:
+    banner-mode: off
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+  datasource:
+    url: jdbc:sqlite:${app.data-dir}/billing.db?journal_mode=WAL&foreign_keys=on&busy_timeout=5000&synchronous=NORMAL
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 4
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.community.dialect.SQLiteDialect
+        type:
+          preferred_uuid_jdbc_type: CHAR
+  flyway:
+    locations: classpath:db/migration
+
+logging:
+  file:
+    name: ${app.data-dir}/logs/server.log
+  logback:
+    rollingpolicy:
+      max-history: 14
